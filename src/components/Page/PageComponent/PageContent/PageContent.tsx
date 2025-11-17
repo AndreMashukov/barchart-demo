@@ -28,6 +28,7 @@ const PageContent: React.FC<PageContentProps> = ({
   return (
     <Container
       maxWidth={false}
+      disableGutters
       sx={{
         padding: '10px 0px 0px 0px',
       }}

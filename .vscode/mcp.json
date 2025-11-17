@@ -1,0 +1,19 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github_token",
+      "description": "GitHub Personal Access Token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "Figma": {
+      "url": "http://127.0.0.1:3845/mcp"
+    }
+  }
+}

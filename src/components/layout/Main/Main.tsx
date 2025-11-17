@@ -27,11 +27,7 @@ const StyledMain = styled("main", {
     }),
     background: "whitesmoke",
     minHeight: "100vh",
-    marginLeft: sidebarRequired
-      ? opensidebar
-        ? drawerwidth
-        : `calc(${theme.spacing(8)} + 1px)`
-      : "none",
+    marginLeft: theme.spacing(1), // Small gap between sidebar and main content
     marginTop: theme.mixins.toolbar.minHeight, // Add margin top for the header
     [theme.breakpoints.down("md")]: {
       background: "white",
