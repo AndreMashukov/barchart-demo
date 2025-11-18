@@ -12,7 +12,7 @@ interface TabGeneralProps {
 const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
   return (
     <TabPanel value={value} index={index}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4, flex: 1 }}>
         {/* Dashboard Stats Tiles */}
         <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
           <SimpleTile

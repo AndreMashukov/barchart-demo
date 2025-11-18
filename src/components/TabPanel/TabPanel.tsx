@@ -14,10 +14,11 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
+      style={{ flex: 1, display: value === index ? 'flex' : 'none', flexDirection: 'column' }}
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
           {children}
         </Box>
       )}

@@ -21,8 +21,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <PageContent title="Dashboard" userName="Developer">
-      <Box sx={{ width: '100%' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider'}}>
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="dashboard tabs">
             <Tab label="General" {...a11yProps(0)} />
           </Tabs>
