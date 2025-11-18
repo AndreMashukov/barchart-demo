@@ -21,6 +21,8 @@ const StyledMain = styled("main", {
     drawerwidth,
   }: StyledMainProps & {theme: Theme}) => ({
     flexGrow: 1,
+    display: "flex",
+    flexDirection: "column",
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,

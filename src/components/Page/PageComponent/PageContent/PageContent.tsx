@@ -31,6 +31,10 @@ const PageContent: React.FC<PageContentProps> = ({
       disableGutters
       sx={{
         padding: '10px 0px 0px 0px',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        height: '100%',
       }}
     >
       {!hideGreeting && (
@@ -68,7 +72,9 @@ const PageContent: React.FC<PageContentProps> = ({
           borderRadius: '8px',
           boxShadow: 2,
           marginBottom: '15px',
-          height: 'auto',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {children}
