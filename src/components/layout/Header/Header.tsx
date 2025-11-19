@@ -1,7 +1,6 @@
 import React from "react";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
@@ -35,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({
   const { openSidebar } = state;
   const theme = useTheme();
 
-  const appBarBackgroundColor = backgroundColor ?? theme.palette.primary.main;
+  const appBarBackgroundColor = backgroundColor ?? theme.palette.secondary.main;
 
   return (
     <AppBar

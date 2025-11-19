@@ -2,7 +2,6 @@ import React, { useContext, useLayoutEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import CssBaseline from "@mui/material/CssBaseline";
-import Toolbar from "@mui/material/Toolbar";
 
 // Layout components
 import Sidebar from "../../layout/Sidebar/Sidebar";
@@ -37,7 +36,7 @@ const theme = createTheme({
       main: "#fc7b00",
     },
     secondary: {
-      main: "#1976d2",
+      main: "#010028",
     },
   },
 });
@@ -121,6 +120,7 @@ const PageComponent: React.FC<PageComponentProps> = ({ children }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ 
+        pt: 2,
         display: "flex", 
         minHeight: "100vh",
         background: "whitesmoke",
@@ -132,7 +132,6 @@ const PageComponent: React.FC<PageComponentProps> = ({ children }) => {
           drawerWidth={drawerWidth}
           sidebarRequired={true}
         >
-          <Toolbar />
           {children}
         </Main>
       </Box>

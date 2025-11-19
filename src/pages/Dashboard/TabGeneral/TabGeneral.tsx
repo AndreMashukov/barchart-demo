@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import Box from "@mui/material/Box";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import Typography from "@mui/material/Typography";
 import TabPanel from "../../../components/TabPanel";
 import SimpleTile from "../../../components/Tiles/SimpleTile/SimpleTile";
@@ -83,7 +81,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
 };
 
 const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
-  const { state, toggleEditMode, addTile, removeTile } = useTileEdit();
+  const { state, addTile, removeTile } = useTileEdit();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ row: 1 | 2; index: number } | null>(null);
 
@@ -112,22 +110,6 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
 
   return (
     <TabPanel value={value} index={index}>
-      {/* Edit Mode Toggle */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Typography variant="h6">Dashboard Tiles</Typography>
-        <FormControlLabel
-          control={<Switch checked={state.editMode} onChange={toggleEditMode} />}
-          label="Edit Mode"
-        />
-      </Box>
-
       {isEmpty ? (
         <EmptyTilesState />
       ) : (
