@@ -1,6 +1,6 @@
-import React from 'react';
-import { PageContextProvider } from './context/PageContextProvider';
-import PageComponent from './PageComponent/PageComponent';
+import React from "react";
+import { PageContextProvider } from "./context/PageContextProvider";
+import PageComponent from "./PageComponent/PageComponent";
 
 interface PageProps {
   children: React.ReactNode;

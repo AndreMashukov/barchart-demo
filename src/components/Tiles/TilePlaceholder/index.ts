@@ -1,1 +1,1 @@
-export { default } from './TilePlaceholder';
+export { default } from "./TilePlaceholder";

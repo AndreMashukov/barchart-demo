@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Container, Typography } from '@mui/material';
+import React from "react";
+import { Box, Container, Typography } from "@mui/material";
 
 interface PageContentProps {
   title?: string;
@@ -12,17 +12,17 @@ const PageContent: React.FC<PageContentProps> = ({
   title, 
   children, 
   hideGreeting = false,
-  userName = 'User'
+  userName = "User"
 }) => {
   const handleGreeting = () => {
     const currHours = new Date().getHours();
     if (currHours < 12) {
-      return 'Good Morning';
+      return "Good Morning";
     }
     if (currHours < 18) {
-      return 'Good Afternoon';
+      return "Good Afternoon";
     }
-    return 'Good Evening';
+    return "Good Evening";
   };
 
   return (
@@ -30,32 +30,32 @@ const PageContent: React.FC<PageContentProps> = ({
       maxWidth={false}
       disableGutters
       sx={{
-        padding: '10px 0px 0px 0px',
-        display: 'flex',
-        flexDirection: 'column',
+        padding: "10px 0px 0px 0px",
+        display: "flex",
+        flexDirection: "column",
         flex: 1,
-        height: '100%',
+        height: "100%",
       }}
     >
       {!hideGreeting && (
         <Box
           sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "baseline",
             mb: 2,
           }}
         >
           <Box>
-            <Typography variant="body1" gutterBottom sx={{ pl: '5px' }}>
+            <Typography variant="body1" gutterBottom sx={{ pl: "5px" }}>
               {handleGreeting()}, {userName}
             </Typography>
             {title && (
               <Typography
                 variant="h5"
                 gutterBottom
-                sx={{ fontWeight: 'bold', pl: '5px' }}
+                sx={{ fontWeight: "bold", pl: "5px" }}
               >
                 {title}
               </Typography>
@@ -67,14 +67,14 @@ const PageContent: React.FC<PageContentProps> = ({
 
       <Box
         sx={{
-          bgcolor: 'white',
-          padding: '25px',
-          borderRadius: '8px',
+          bgcolor: "white",
+          padding: "25px",
+          borderRadius: "8px",
           boxShadow: 2,
-          marginBottom: '15px',
+          marginBottom: "15px",
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {children}

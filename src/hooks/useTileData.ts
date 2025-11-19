@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { TileDataSource } from '../config/availableTiles';
+import { useState, useEffect } from "react";
+import { TileDataSource } from "../config/availableTiles";
 
 interface TileData {
   count?: number;
@@ -29,13 +29,13 @@ const mockDataGenerators: Record<TileDataSource, () => TileData> = {
   websiteTraffic: () => ({
     count: 5680,
     sparklineData: [
-      { date: '2024-01-01', value: 4200 },
-      { date: '2024-02-01', value: 4580 },
-      { date: '2024-03-01', value: 4320 },
-      { date: '2024-04-01', value: 4890 },
-      { date: '2024-05-01', value: 5120 },
-      { date: '2024-06-01', value: 5450 },
-      { date: '2024-07-01', value: 5680 },
+      { date: "2024-01-01", value: 4200 },
+      { date: "2024-02-01", value: 4580 },
+      { date: "2024-03-01", value: 4320 },
+      { date: "2024-04-01", value: 4890 },
+      { date: "2024-05-01", value: 5120 },
+      { date: "2024-06-01", value: 5450 },
+      { date: "2024-07-01", value: 5680 },
     ],
   }),
 };
@@ -73,7 +73,7 @@ export const useTileData = (dataSource: TileDataSource | null): UseTileDataRetur
           throw new Error(`No data generator found for ${dataSource}`);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch tile data');
+        setError(err instanceof Error ? err.message : "Failed to fetch tile data");
         setData(null);
       } finally {
         setLoading(false);

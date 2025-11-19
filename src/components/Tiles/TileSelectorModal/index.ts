@@ -1,1 +1,1 @@
-export { default } from './TileSelectorModal';
+export { default } from "./TileSelectorModal";

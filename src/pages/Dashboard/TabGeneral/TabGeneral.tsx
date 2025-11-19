@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import Box from '@mui/material/Box';
-import Switch from '@mui/material/Switch';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Typography from '@mui/material/Typography';
-import TabPanel from '../../../components/TabPanel';
-import SimpleTile from '../../../components/Tiles/SimpleTile/SimpleTile';
-import SparklineTileBarCol from '../../../components/Tiles/SparklineTileBarCol/SparklineTileBarCol';
-import SparklineTileLineCol from '../../../components/Tiles/SparklineTileLineCol/SparklineTileLineCol';
-import TilePlaceholder from '../../../components/Tiles/TilePlaceholder';
-import TileSelectorModal from '../../../components/Tiles/TileSelectorModal';
-import EditableTileWrapper from '../../../components/Tiles/EditableTileWrapper';
-import EmptyTilesState from '../../../components/Tiles/EmptyTilesState';
-import { useTileEdit } from '../../../context/TileEditContext';
-import { getTileConfigById, TileType } from '../../../config/availableTiles';
-import { useTileData } from '../../../hooks/useTileData';
+import React, { useState } from "react";
+import Box from "@mui/material/Box";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Typography from "@mui/material/Typography";
+import TabPanel from "../../../components/TabPanel";
+import SimpleTile from "../../../components/Tiles/SimpleTile/SimpleTile";
+import SparklineTileBarCol from "../../../components/Tiles/SparklineTileBarCol/SparklineTileBarCol";
+import SparklineTileLineCol from "../../../components/Tiles/SparklineTileLineCol/SparklineTileLineCol";
+import TilePlaceholder from "../../../components/Tiles/TilePlaceholder";
+import TileSelectorModal from "../../../components/Tiles/TileSelectorModal";
+import EditableTileWrapper from "../../../components/Tiles/EditableTileWrapper";
+import EmptyTilesState from "../../../components/Tiles/EmptyTilesState";
+import { useTileEdit } from "../../../context/TileEditContext";
+import { getTileConfigById, TileType } from "../../../config/availableTiles";
+import { useTileData } from "../../../hooks/useTileData";
 
 interface TabGeneralProps {
   value: number;
@@ -35,7 +35,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
 
   let tileContent = null;
 
-  if (config.component === 'SimpleTile') {
+  if (config.component === "SimpleTile") {
     tileContent = (
       <SimpleTile
         count={data?.count}
@@ -45,7 +45,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
         backgroundColor={config.backgroundColor}
       />
     );
-  } else if (config.component === 'SparklineTileBarCol') {
+  } else if (config.component === "SparklineTileBarCol") {
     tileContent = (
       <SparklineTileBarCol
         count={data?.count}
@@ -60,7 +60,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
         highlightColor={config.highlightColor}
       />
     );
-  } else if (config.component === 'SparklineTileLineCol') {
+  } else if (config.component === "SparklineTileLineCol") {
     tileContent = (
       <SparklineTileLineCol
         count={data?.count}
@@ -115,9 +115,9 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
       {/* Edit Mode Toggle */}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           mb: 3,
         }}
       >
@@ -135,8 +135,8 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
           {/* Row 1: Type1 Tiles (4 slots) */}
           <Box
             sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: "flex",
+              flexWrap: "wrap",
               gap: 3,
               mb: 3,
             }}
@@ -146,11 +146,11 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                 key={`row1-${index}`}
                 sx={{
                   flex: {
-                    xs: '1 1 calc(50% - 12px)',
-                    md: '1 1 calc(25% - 18px)',
+                    xs: "1 1 calc(50% - 12px)",
+                    md: "1 1 calc(25% - 18px)",
                   },
-                  minWidth: { xs: 'calc(50% - 12px)', md: '200px' },
-                  minHeight: '150px',
+                  minWidth: { xs: "calc(50% - 12px)", md: "200px" },
+                  minHeight: "150px",
                 }}
               >
                 {tileId ? (
@@ -169,8 +169,8 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
           {/* Row 2: Type2 Tiles (2 slots) */}
           <Box
             sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: "flex",
+              flexWrap: "wrap",
               gap: 3,
             }}
           >
@@ -179,11 +179,11 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                 key={`row2-${index}`}
                 sx={{
                   flex: {
-                    xs: '1 1 100%',
-                    md: '1 1 calc(50% - 12px)',
+                    xs: "1 1 100%",
+                    md: "1 1 calc(50% - 12px)",
                   },
-                  minWidth: { xs: '100%', md: '300px' },
-                  minHeight: '200px',
+                  minWidth: { xs: "100%", md: "300px" },
+                  minHeight: "200px",
                 }}
               >
                 {tileId ? (
@@ -205,7 +205,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
       <TileSelectorModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        tileType={(selectedSlot?.row === 1 ? 'Type1' : 'Type2') as TileType}
+        tileType={(selectedSlot?.row === 1 ? "Type1" : "Type2") as TileType}
         onSelectTile={handleTileSelect}
         excludedTileIds={placedTileIds}
       />

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
-import { useBaseReducer } from '../../hooks/useBaseReducer';
+import React, { createContext, useContext, useEffect, ReactNode } from "react";
+import { useBaseReducer } from "../../hooks/useBaseReducer";
 
-const STORAGE_KEY = 'dashboard-tile-configuration';
+const STORAGE_KEY = "dashboard-tile-configuration";
 
 export interface TileEditState {
   editMode: boolean;
@@ -24,7 +24,7 @@ interface TileEditProviderProps {
 
 const getInitialState = (): TileEditState => {
   // Try to load from localStorage
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
@@ -35,7 +35,7 @@ const getInitialState = (): TileEditState => {
           row2Tiles: parsed.row2Tiles || [null, null],
         };
       } catch (e) {
-        console.error('Failed to parse stored tile configuration:', e);
+        console.error("Failed to parse stored tile configuration:", e);
       }
     }
   }
@@ -56,7 +56,7 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
 
   // Persist to localStorage whenever tile configuration changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const toStore = {
         row1Tiles: state.row1Tiles,
         row2Tiles: state.row2Tiles,
@@ -106,7 +106,7 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
 export const useTileEdit = (): TileEditContextValue => {
   const context = useContext(TileEditContext);
   if (context === undefined) {
-    throw new Error('useTileEdit must be used within a TileEditProvider');
+    throw new Error("useTileEdit must be used within a TileEditProvider");
   }
   return context;
 };

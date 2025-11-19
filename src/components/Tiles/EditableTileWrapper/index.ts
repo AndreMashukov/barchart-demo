@@ -1,1 +1,1 @@
-export { default } from './EditableTileWrapper';
+export { default } from "./EditableTileWrapper";

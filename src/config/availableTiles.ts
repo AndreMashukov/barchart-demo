@@ -1,17 +1,17 @@
-import { indigo, orange, blue, green, purple, teal, pink } from '@mui/material/colors';
+import { indigo, orange, blue, green, purple, teal, pink } from "@mui/material/colors";
 
-export type TileType = 'Type1' | 'Type2';
+export type TileType = "Type1" | "Type2";
 
-export type TileComponentType = 'SimpleTile' | 'SparklineTileBarCol' | 'SparklineTileLineCol';
+export type TileComponentType = "SimpleTile" | "SparklineTileBarCol" | "SparklineTileLineCol";
 
 export type TileDataSource =
-  | 'totalCharts'
-  | 'activeUsers'
-  | 'dataPoints'
-  | 'uptime'
-  | 'performanceScore'
-  | 'revenue'
-  | 'websiteTraffic';
+  | "totalCharts"
+  | "activeUsers"
+  | "dataPoints"
+  | "uptime"
+  | "performanceScore"
+  | "revenue"
+  | "websiteTraffic";
 
 // Base configuration shared by all tiles
 interface BaseTileConfig {
@@ -26,16 +26,16 @@ interface BaseTileConfig {
 
 // Type1 tiles (SimpleTile) - no sparkline data
 export interface SimpleTileConfig extends BaseTileConfig {
-  type: 'Type1';
-  component: 'SimpleTile';
-  dataSource: 'totalCharts' | 'activeUsers' | 'dataPoints' | 'uptime';
+  type: "Type1";
+  component: "SimpleTile";
+  dataSource: "totalCharts" | "activeUsers" | "dataPoints" | "uptime";
 }
 
 // Type2 tiles with bar sparkline
 export interface SparklineBarTileConfig extends BaseTileConfig {
-  type: 'Type2';
-  component: 'SparklineTileBarCol';
-  dataSource: 'performanceScore' | 'revenue';
+  type: "Type2";
+  component: "SparklineTileBarCol";
+  dataSource: "performanceScore" | "revenue";
   sparklineHeight?: number;
   sparklineWidth?: number;
   highlightRange?: [number, number];
@@ -44,9 +44,9 @@ export interface SparklineBarTileConfig extends BaseTileConfig {
 
 // Type2 tiles with line sparkline
 export interface SparklineLineTileConfig extends BaseTileConfig {
-  type: 'Type2';
-  component: 'SparklineTileLineCol';
-  dataSource: 'websiteTraffic';
+  type: "Type2";
+  component: "SparklineTileLineCol";
+  dataSource: "websiteTraffic";
   sparklineHeight?: number;
   sparklineWidth?: number;
 }
@@ -57,75 +57,75 @@ export type TileConfig = SimpleTileConfig | SparklineBarTileConfig | SparklineLi
 export const availableTiles: TileConfig[] = [
   // Type1 Tiles (SimpleTile)
   {
-    id: 'tile-total-charts',
-    type: 'Type1',
-    component: 'SimpleTile',
-    label: 'Total Charts',
-    color: 'white',
+    id: "tile-total-charts",
+    type: "Type1",
+    component: "SimpleTile",
+    label: "Total Charts",
+    color: "white",
     backgroundColor: indigo[900],
-    dataSource: 'totalCharts',
+    dataSource: "totalCharts",
   },
   {
-    id: 'tile-active-users',
-    type: 'Type1',
-    component: 'SimpleTile',
-    label: 'Active Users',
-    color: 'white',
+    id: "tile-active-users",
+    type: "Type1",
+    component: "SimpleTile",
+    label: "Active Users",
+    color: "white",
     backgroundColor: orange[700],
-    dataSource: 'activeUsers',
+    dataSource: "activeUsers",
   },
   {
-    id: 'tile-data-points',
-    type: 'Type1',
-    component: 'SimpleTile',
-    label: 'Data Points',
-    color: 'white',
+    id: "tile-data-points",
+    type: "Type1",
+    component: "SimpleTile",
+    label: "Data Points",
+    color: "white",
     backgroundColor: blue[500],
-    dataSource: 'dataPoints',
+    dataSource: "dataPoints",
   },
   {
-    id: 'tile-uptime',
-    type: 'Type1',
-    component: 'SimpleTile',
-    label: 'Uptime %',
-    color: 'white',
+    id: "tile-uptime",
+    type: "Type1",
+    component: "SimpleTile",
+    label: "Uptime %",
+    color: "white",
     backgroundColor: green[600],
-    dataSource: 'uptime',
+    dataSource: "uptime",
   },
 
   // Type2 Tiles (Sparkline Tiles)
   {
-    id: 'tile-performance-score',
-    type: 'Type2',
-    component: 'SparklineTileBarCol',
-    label: 'Performance Score',
-    color: 'white',
+    id: "tile-performance-score",
+    type: "Type2",
+    component: "SparklineTileBarCol",
+    label: "Performance Score",
+    color: "white",
     backgroundColor: purple[700],
-    dataSource: 'performanceScore',
+    dataSource: "performanceScore",
     sparklineHeight: 40,
     sparklineWidth: 200,
     highlightRange: [8, 11],
     highlightColor: purple[300],
   },
   {
-    id: 'tile-revenue',
-    type: 'Type2',
-    component: 'SparklineTileBarCol',
-    label: 'Revenue (k)',
-    color: 'white',
+    id: "tile-revenue",
+    type: "Type2",
+    component: "SparklineTileBarCol",
+    label: "Revenue (k)",
+    color: "white",
     backgroundColor: teal[600],
-    dataSource: 'revenue',
+    dataSource: "revenue",
     sparklineHeight: 40,
     sparklineWidth: 200,
   },
   {
-    id: 'tile-website-traffic',
-    type: 'Type2',
-    component: 'SparklineTileLineCol',
-    label: 'Website Traffic',
-    color: 'white',
+    id: "tile-website-traffic",
+    type: "Type2",
+    component: "SparklineTileLineCol",
+    label: "Website Traffic",
+    color: "white",
     backgroundColor: pink[600],
-    dataSource: 'websiteTraffic',
+    dataSource: "websiteTraffic",
     sparklineHeight: 40,
     sparklineWidth: 200,
   },

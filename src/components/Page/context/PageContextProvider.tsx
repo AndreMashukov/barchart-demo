@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { useBaseReducer } from '../../../hooks/useBaseReducer';
-import { PageContext, PageState } from './PageContext';
+import React, { useMemo } from "react";
+import { useBaseReducer } from "../../../hooks/useBaseReducer";
+import { PageContext, PageState } from "./PageContext";
 
 interface PageContextProviderProps {
   children: React.ReactNode;
