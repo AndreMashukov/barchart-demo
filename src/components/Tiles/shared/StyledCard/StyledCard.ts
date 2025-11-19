@@ -13,7 +13,7 @@ const StyledCard = styled(Card)<StyledCardProps>(
   ({theme, backgroundColor, clickable, selected}) => ({
     background: backgroundColor,
     borderRadius: theme.spacing(2),
-    padding: theme.spacing(2),
+    height: "100%",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
