@@ -1,117 +1,214 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
-import { blue, indigo, orange, green, purple, cyan, teal, pink } from '@mui/material/colors';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Typography from '@mui/material/Typography';
 import TabPanel from '../../../components/TabPanel';
-import SimpleTile from '../../../components/Tiles/SimpleTile';
+import SimpleTile from '../../../components/Tiles/SimpleTile/SimpleTile';
 import SparklineTileBarCol from '../../../components/Tiles/SparklineTileBarCol/SparklineTileBarCol';
 import SparklineTileLineCol from '../../../components/Tiles/SparklineTileLineCol/SparklineTileLineCol';
+import TilePlaceholder from '../../../components/Tiles/TilePlaceholder';
+import TileSelectorModal from '../../../components/Tiles/TileSelectorModal';
+import EditableTileWrapper from '../../../components/Tiles/EditableTileWrapper';
+import EmptyTilesState from '../../../components/Tiles/EmptyTilesState';
+import { useTileEdit } from '../../../context/TileEditContext';
+import { getTileConfigById, TileType } from '../../../config/availableTiles';
+import { useTileData } from '../../../hooks/useTileData';
 
 interface TabGeneralProps {
   value: number;
   index: number;
 }
 
-// Mock data for sparklines
-const mockBarData = [45, 52, 38, 65, 42, 58, 70, 61, 55, 48, 62, 68];
+// Component to render a single tile based on its configuration
+interface TileRendererProps {
+  tileId: string;
+  editMode: boolean;
+  onRemove: () => void;
+}
 
-const mockRevenueData = [280, 320, 295, 340, 315, 370, 385, 360, 395, 410, 425, 440];
-const mockTrafficData = [
-  { date: '2024-01-01', value: 4200 },
-  { date: '2024-02-01', value: 4580 },
-  { date: '2024-03-01', value: 4320 },
-  { date: '2024-04-01', value: 4890 },
-  { date: '2024-05-01', value: 5120 },
-  { date: '2024-06-01', value: 5450 },
-  { date: '2024-07-01', value: 5680 },
-];
+const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove }) => {
+  const config = getTileConfigById(tileId);
+  const { data, loading } = useTileData(config?.dataSource || null);
+
+  if (!config) return null;
+
+  let tileContent = null;
+
+  if (config.component === 'SimpleTile') {
+    tileContent = (
+      <SimpleTile
+        count={data?.count}
+        label={config.label}
+        loading={loading}
+        color={config.color}
+        backgroundColor={config.backgroundColor}
+      />
+    );
+  } else if (config.component === 'SparklineTileBarCol') {
+    tileContent = (
+      <SparklineTileBarCol
+        count={data?.count}
+        label={config.label}
+        loading={loading}
+        color={config.color}
+        backgroundColor={config.backgroundColor}
+        sparklineData={(data?.sparklineData as number[]) || []}
+        sparklineHeight={config.sparklineHeight}
+        sparklineWidth={config.sparklineWidth}
+        highlightRange={config.highlightRange}
+        highlightColor={config.highlightColor}
+      />
+    );
+  } else if (config.component === 'SparklineTileLineCol') {
+    tileContent = (
+      <SparklineTileLineCol
+        count={data?.count}
+        label={config.label}
+        loading={loading}
+        color={config.color}
+        backgroundColor={config.backgroundColor}
+        sparklineData={(data?.sparklineData as Array<{ date: string; value: number }>) || []}
+        sparklineHeight={config.sparklineHeight}
+        sparklineWidth={config.sparklineWidth}
+      />
+    );
+  }
+
+  return (
+    <EditableTileWrapper editMode={editMode} onRemove={onRemove}>
+      {tileContent}
+    </EditableTileWrapper>
+  );
+};
 
 const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
+  const { state, toggleEditMode, addTile, removeTile } = useTileEdit();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{ row: 1 | 2; index: number } | null>(null);
+
+  const handlePlaceholderClick = (row: 1 | 2, slotIndex: number) => {
+    setSelectedSlot({ row, index: slotIndex });
+    setModalOpen(true);
+  };
+
+  const handleTileSelect = (tileId: string) => {
+    if (selectedSlot) {
+      addTile(tileId, selectedSlot.row, selectedSlot.index);
+    }
+  };
+
+  const handleRemoveTile = (row: 1 | 2, slotIndex: number) => {
+    removeTile(row, slotIndex);
+  };
+
+  // Get all currently placed tile IDs to exclude from selector
+  const placedTileIds = [...state.row1Tiles, ...state.row2Tiles].filter(
+    (id): id is string => id !== null
+  );
+
+  // Check if dashboard is empty
+  const isEmpty = !state.editMode && placedTileIds.length === 0;
+
   return (
     <TabPanel value={value} index={index}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4, flex: 1 }}>
-        {/* Dashboard Stats Tiles */}
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SimpleTile
-            count={152}
-            label="Total Charts"
-            loading={false}
-            color="white"
-            backgroundColor={indigo[900]}
-          />
-        </Box>
-
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SimpleTile
-            count={48}
-            label="Active Users"
-            loading={false}
-            color="white"
-            backgroundColor={orange[700]}
-          />
-        </Box>
-
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SimpleTile
-            count={12500}
-            label="Data Points"
-            loading={false}
-            color="white"
-            backgroundColor={blue[500]}
-          />
-        </Box>
-
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SimpleTile
-            count={99.9}
-            label="Uptime %"
-            loading={false}
-            color="white"
-            backgroundColor={green[600]}
-          />
-        </Box>
-
-        {/* Sparkline Tiles */}
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SparklineTileBarCol
-            count={68}
-            label="Performance Score"
-            loading={false}
-            color="white"
-            backgroundColor={purple[700]}
-            sparklineData={mockBarData}
-            sparklineHeight={40}
-            sparklineWidth={200}
-            highlightRange={[8, 11]}
-            highlightColor={purple[300]}
-          />
-        </Box>
-
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SparklineTileBarCol
-            count={440}
-            label="Revenue (k)"
-            loading={false}
-            color="white"
-            backgroundColor={teal[600]}
-            sparklineData={mockRevenueData}
-            sparklineHeight={40}
-            sparklineWidth={200}
-          />
-        </Box>
-
-        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
-          <SparklineTileLineCol
-            count={5680}
-            label="Website Traffic"
-            loading={false}
-            color="white"
-            backgroundColor={pink[600]}
-            sparklineData={mockTrafficData}
-            sparklineHeight={40}
-            sparklineWidth={200}
-          />
-        </Box>
+      {/* Edit Mode Toggle */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
+        <Typography variant="h6">Dashboard Tiles</Typography>
+        <FormControlLabel
+          control={<Switch checked={state.editMode} onChange={toggleEditMode} />}
+          label="Edit Mode"
+        />
       </Box>
+
+      {isEmpty ? (
+        <EmptyTilesState />
+      ) : (
+        <>
+          {/* Row 1: Type1 Tiles (4 slots) */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 3,
+              mb: 3,
+            }}
+          >
+            {state.row1Tiles.map((tileId, index) => (
+              <Box
+                key={`row1-${index}`}
+                sx={{
+                  flex: {
+                    xs: '1 1 calc(50% - 12px)',
+                    md: '1 1 calc(25% - 18px)',
+                  },
+                  minWidth: { xs: 'calc(50% - 12px)', md: '200px' },
+                  minHeight: '150px',
+                }}
+              >
+                {tileId ? (
+                  <TileRenderer
+                    tileId={tileId}
+                    editMode={state.editMode}
+                    onRemove={() => handleRemoveTile(1, index)}
+                  />
+                ) : state.editMode ? (
+                  <TilePlaceholder type="Type1" onClick={() => handlePlaceholderClick(1, index)} />
+                ) : null}
+              </Box>
+            ))}
+          </Box>
+
+          {/* Row 2: Type2 Tiles (2 slots) */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 3,
+            }}
+          >
+            {state.row2Tiles.map((tileId, index) => (
+              <Box
+                key={`row2-${index}`}
+                sx={{
+                  flex: {
+                    xs: '1 1 100%',
+                    md: '1 1 calc(50% - 12px)',
+                  },
+                  minWidth: { xs: '100%', md: '300px' },
+                  minHeight: '200px',
+                }}
+              >
+                {tileId ? (
+                  <TileRenderer
+                    tileId={tileId}
+                    editMode={state.editMode}
+                    onRemove={() => handleRemoveTile(2, index)}
+                  />
+                ) : state.editMode ? (
+                  <TilePlaceholder type="Type2" onClick={() => handlePlaceholderClick(2, index)} />
+                ) : null}
+              </Box>
+            ))}
+          </Box>
+        </>
+      )}
+
+      {/* Tile Selector Modal */}
+      <TileSelectorModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        tileType={(selectedSlot?.row === 1 ? 'Type1' : 'Type2') as TileType}
+        onSelectTile={handleTileSelect}
+        excludedTileIds={placedTileIds}
+      />
     </TabPanel>
   );
 };
