@@ -3,17 +3,24 @@ import { useBaseReducer } from "../../hooks/useBaseReducer";
 
 const STORAGE_KEY = "dashboard-tile-configuration";
 
+// Each slot can contain either:
+// - An array of 4 Type1 tile IDs (quadrants: [TL, TR, BL, BR])
+// - A single Type2 tile ID (string)
+export type SlotContent = [string | null, string | null, string | null, string | null] | string | null;
+
 export interface TileEditState {
   editMode: boolean;
-  row1Tiles: (string | null)[];
-  row2Tiles: (string | null)[];
+  row1Tiles: SlotContent[];
+  row2Tiles: SlotContent[];
 }
 
 interface TileEditContextValue {
   state: TileEditState;
   toggleEditMode: () => void;
-  addTile: (tileId: string, row: 1 | 2, index: number) => void;
-  removeTile: (row: 1 | 2, index: number) => void;
+  addTileToQuadrant: (tileId: string, row: 1 | 2, slotIndex: number, quadrant: number) => void;
+  addTileToCenter: (tileId: string, row: 1 | 2, slotIndex: number) => void;
+  removeTileFromQuadrant: (row: 1 | 2, slotIndex: number, quadrant: number) => void;
+  removeEntireSlot: (row: 1 | 2, slotIndex: number) => void;
 }
 
 const TileEditContext = createContext<TileEditContextValue | undefined>(undefined);
@@ -31,7 +38,7 @@ const getInitialState = (): TileEditState => {
         const parsed = JSON.parse(stored);
         return {
           editMode: false, // Always start in view mode
-          row1Tiles: parsed.row1Tiles || [null, null, null, null],
+          row1Tiles: parsed.row1Tiles || [null, null],
           row2Tiles: parsed.row2Tiles || [null, null],
         };
       } catch (e) {
@@ -40,10 +47,10 @@ const getInitialState = (): TileEditState => {
     }
   }
 
-  // Default state: empty placeholders
+  // Default state: 2 empty slots per row
   return {
     editMode: false,
-    row1Tiles: [null, null, null, null],
+    row1Tiles: [null, null],
     row2Tiles: [null, null],
   };
 };
@@ -69,35 +76,77 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
     actions.setEditMode(!state.editMode);
   };
 
-  const addTile = (tileId: string, row: 1 | 2, index: number) => {
-    if (row === 1) {
-      const newRow1 = [...state.row1Tiles];
-      newRow1[index] = tileId;
-      actions.setRow1Tiles(newRow1);
+  const addTileToQuadrant = (tileId: string, row: 1 | 2, slotIndex: number, quadrant: number) => {
+    const tiles = row === 1 ? [...state.row1Tiles] : [...state.row2Tiles];
+    const currentSlot = tiles[slotIndex];
+    
+    // Initialize quadrants array if slot is empty or has a Type2 tile
+    let quadrants: [string | null, string | null, string | null, string | null];
+    if (Array.isArray(currentSlot)) {
+      quadrants = [...currentSlot] as [string | null, string | null, string | null, string | null];
     } else {
-      const newRow2 = [...state.row2Tiles];
-      newRow2[index] = tileId;
-      actions.setRow2Tiles(newRow2);
+      quadrants = [null, null, null, null];
+    }
+    
+    quadrants[quadrant] = tileId;
+    tiles[slotIndex] = quadrants;
+    
+    if (row === 1) {
+      actions.setRow1Tiles(tiles);
+    } else {
+      actions.setRow2Tiles(tiles);
     }
   };
 
-  const removeTile = (row: 1 | 2, index: number) => {
+  const addTileToCenter = (tileId: string, row: 1 | 2, slotIndex: number) => {
+    const tiles = row === 1 ? [...state.row1Tiles] : [...state.row2Tiles];
+    tiles[slotIndex] = tileId; // Replace entire slot with Type2 tile
+    
     if (row === 1) {
-      const newRow1 = [...state.row1Tiles];
-      newRow1[index] = null;
-      actions.setRow1Tiles(newRow1);
+      actions.setRow1Tiles(tiles);
     } else {
-      const newRow2 = [...state.row2Tiles];
-      newRow2[index] = null;
-      actions.setRow2Tiles(newRow2);
+      actions.setRow2Tiles(tiles);
+    }
+  };
+
+  const removeTileFromQuadrant = (row: 1 | 2, slotIndex: number, quadrant: number) => {
+    const tiles = row === 1 ? [...state.row1Tiles] : [...state.row2Tiles];
+    const currentSlot = tiles[slotIndex];
+    
+    if (Array.isArray(currentSlot)) {
+      const quadrants = [...currentSlot] as [string | null, string | null, string | null, string | null];
+      quadrants[quadrant] = null;
+      
+      // If all quadrants are empty, set slot to null
+      const allEmpty = quadrants.every(q => q === null);
+      tiles[slotIndex] = allEmpty ? null : quadrants;
+      
+      if (row === 1) {
+        actions.setRow1Tiles(tiles);
+      } else {
+        actions.setRow2Tiles(tiles);
+      }
+    }
+  };
+
+  const removeEntireSlot = (row: 1 | 2, slotIndex: number) => {
+    const tiles = row === 1 ? [...state.row1Tiles] : [...state.row2Tiles];
+    tiles[slotIndex] = null;
+    
+    if (row === 1) {
+      actions.setRow1Tiles(tiles);
+    } else {
+      actions.setRow2Tiles(tiles);
     }
   };
 
   const value: TileEditContextValue = {
     state,
     toggleEditMode,
-    addTile,
-    removeTile,
+    addTileToQuadrant,
+    addTileToCenter,
+    removeTileFromQuadrant,
+    removeEntireSlot,
   };
 
   return <TileEditContext.Provider value={value}>{children}</TileEditContext.Provider>;

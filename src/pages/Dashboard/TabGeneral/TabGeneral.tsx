@@ -5,11 +5,11 @@ import TabPanel from "../../../components/TabPanel";
 import SimpleTile from "../../../components/Tiles/SimpleTile/SimpleTile";
 import SparklineTileBarCol from "../../../components/Tiles/SparklineTileBarCol/SparklineTileBarCol";
 import SparklineTileLineCol from "../../../components/Tiles/SparklineTileLineCol/SparklineTileLineCol";
-import TilePlaceholder from "../../../components/Tiles/TilePlaceholder";
+import Type2Placeholder from "../../../components/Tiles/Type2Placeholder";
 import TileSelectorModal from "../../../components/Tiles/TileSelectorModal";
 import EditableTileWrapper from "../../../components/Tiles/EditableTileWrapper";
 import EmptyTilesState from "../../../components/Tiles/EmptyTilesState";
-import { useTileEdit } from "../../../context/TileEditContext";
+import { useTileEdit, SlotContent } from "../../../context/TileEditContext";
 import { getTileConfigById, TileType } from "../../../config/availableTiles";
 import { useTileData } from "../../../hooks/useTileData";
 
@@ -81,32 +81,143 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
 };
 
 const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
-  const { state, addTile, removeTile } = useTileEdit();
+  const { state, addTileToQuadrant, addTileToCenter, removeTileFromQuadrant, removeEntireSlot } = useTileEdit();
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ row: 1 | 2; index: number } | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{ 
+    row: 1 | 2; 
+    slotIndex: number; 
+    quadrant?: number; 
+    isCenter?: boolean;
+  } | null>(null);
 
-  const handlePlaceholderClick = (row: 1 | 2, slotIndex: number) => {
-    setSelectedSlot({ row, index: slotIndex });
+  const handleQuadrantClick = (row: 1 | 2, slotIndex: number, quadrant: number) => {
+    setSelectedSlot({ row, slotIndex, quadrant });
+    setModalOpen(true);
+  };
+
+  const handleCenterClick = (row: 1 | 2, slotIndex: number) => {
+    setSelectedSlot({ row, slotIndex, isCenter: true });
     setModalOpen(true);
   };
 
   const handleTileSelect = (tileId: string) => {
     if (selectedSlot) {
-      addTile(tileId, selectedSlot.row, selectedSlot.index);
+      if (selectedSlot.isCenter) {
+        addTileToCenter(tileId, selectedSlot.row, selectedSlot.slotIndex);
+      } else if (selectedSlot.quadrant !== undefined) {
+        addTileToQuadrant(tileId, selectedSlot.row, selectedSlot.slotIndex, selectedSlot.quadrant);
+      }
     }
   };
 
-  const handleRemoveTile = (row: 1 | 2, slotIndex: number) => {
-    removeTile(row, slotIndex);
+  const handleRemoveQuadrantTile = (row: 1 | 2, slotIndex: number, quadrant: number) => {
+    removeTileFromQuadrant(row, slotIndex, quadrant);
+  };
+
+  const handleRemoveSlot = (row: 1 | 2, slotIndex: number) => {
+    removeEntireSlot(row, slotIndex);
   };
 
   // Get all currently placed tile IDs to exclude from selector
-  const placedTileIds = [...state.row1Tiles, ...state.row2Tiles].filter(
-    (id): id is string => id !== null
-  );
+  const placedTileIds: string[] = [];
+  [...state.row1Tiles, ...state.row2Tiles].forEach((slot) => {
+    if (typeof slot === "string") {
+      placedTileIds.push(slot);
+    } else if (Array.isArray(slot)) {
+      slot.forEach((tileId) => {
+        if (tileId) placedTileIds.push(tileId);
+      });
+    }
+  });
 
   // Check if dashboard is empty
   const isEmpty = !state.editMode && placedTileIds.length === 0;
+
+  // Render a slot (either quadrants with Type1 tiles or a single Type2 tile)
+  const renderSlot = (slotContent: SlotContent, row: 1 | 2, slotIndex: number) => {
+    // Type2 tile (string)
+    if (typeof slotContent === "string") {
+      return (
+        <TileRenderer
+          tileId={slotContent}
+          editMode={state.editMode}
+          onRemove={() => handleRemoveSlot(row, slotIndex)}
+        />
+      );
+    }
+
+    // Quadrants with Type1 tiles (array)
+    if (Array.isArray(slotContent)) {
+      return (
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            minHeight: "200px",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gridTemplateRows: "1fr 1fr",
+            gap: 1,
+          }}
+        >
+          {slotContent.map((tileId, quadrant) => (
+            <Box
+              key={`quadrant-${quadrant}`}
+              sx={{
+                minHeight: "95px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {tileId ? (
+                <TileRenderer
+                  tileId={tileId}
+                  editMode={state.editMode}
+                  onRemove={() => handleRemoveQuadrantTile(row, slotIndex, quadrant)}
+                />
+              ) : state.editMode ? (
+                <Box
+                  onClick={() => handleQuadrantClick(row, slotIndex, quadrant)}
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    border: "1px dashed",
+                    borderColor: "grey.300",
+                    borderRadius: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    backgroundColor: "grey.50",
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      backgroundColor: "grey.100",
+                    },
+                  }}
+                >
+                  <Typography variant="caption" color="grey.500">+</Typography>
+                </Box>
+              ) : null}
+            </Box>
+          ))}
+        </Box>
+      );
+    }
+
+    // Empty slot - show Type2Placeholder
+    if (state.editMode) {
+      return (
+        <Type2Placeholder
+          onQuadrantClick={(quadrant) => handleQuadrantClick(row, slotIndex, quadrant)}
+          onCenterClick={() => handleCenterClick(row, slotIndex)}
+        />
+      );
+    }
+
+    return null;
+  };
 
   return (
     <TabPanel value={value} index={index}>
@@ -114,7 +225,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
         <EmptyTilesState />
       ) : (
         <>
-          {/* Row 1: Type1 Tiles (4 slots) */}
+          {/* Row 1: 2 slots (Type1 quadrants OR Type2) */}
           <Box
             sx={{
               display: "flex",
@@ -123,42 +234,9 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
               mb: 3,
             }}
           >
-            {state.row1Tiles.map((tileId, index) => (
+            {state.row1Tiles.map((slotContent, slotIndex) => (
               <Box
-                key={`row1-${index}`}
-                sx={{
-                  flex: {
-                    xs: "1 1 calc(50% - 12px)",
-                    md: "1 1 calc(25% - 18px)",
-                  },
-                  minWidth: { xs: "calc(50% - 12px)", md: "200px" },
-                  minHeight: "150px",
-                }}
-              >
-                {tileId ? (
-                  <TileRenderer
-                    tileId={tileId}
-                    editMode={state.editMode}
-                    onRemove={() => handleRemoveTile(1, index)}
-                  />
-                ) : state.editMode ? (
-                  <TilePlaceholder type="Type1" onClick={() => handlePlaceholderClick(1, index)} />
-                ) : null}
-              </Box>
-            ))}
-          </Box>
-
-          {/* Row 2: Type2 Tiles (2 slots) */}
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 3,
-            }}
-          >
-            {state.row2Tiles.map((tileId, index) => (
-              <Box
-                key={`row2-${index}`}
+                key={`row1-${slotIndex}`}
                 sx={{
                   flex: {
                     xs: "1 1 100%",
@@ -168,15 +246,32 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                   minHeight: "200px",
                 }}
               >
-                {tileId ? (
-                  <TileRenderer
-                    tileId={tileId}
-                    editMode={state.editMode}
-                    onRemove={() => handleRemoveTile(2, index)}
-                  />
-                ) : state.editMode ? (
-                  <TilePlaceholder type="Type2" onClick={() => handlePlaceholderClick(2, index)} />
-                ) : null}
+                {renderSlot(slotContent, 1, slotIndex)}
+              </Box>
+            ))}
+          </Box>
+
+          {/* Row 2: 2 slots (Type2 only) */}
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 3,
+            }}
+          >
+            {state.row2Tiles.map((slotContent, slotIndex) => (
+              <Box
+                key={`row2-${slotIndex}`}
+                sx={{
+                  flex: {
+                    xs: "1 1 100%",
+                    md: "1 1 calc(50% - 12px)",
+                  },
+                  minWidth: { xs: "100%", md: "300px" },
+                  minHeight: "200px",
+                }}
+              >
+                {renderSlot(slotContent, 2, slotIndex)}
               </Box>
             ))}
           </Box>
@@ -187,7 +282,15 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
       <TileSelectorModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        tileType={(selectedSlot?.row === 1 ? "Type1" : "Type2") as TileType}
+        allowedTypes={
+          selectedSlot?.isCenter
+            ? ["Type2"]
+            : selectedSlot?.quadrant !== undefined
+            ? ["Type1"]
+            : selectedSlot?.row === 2
+            ? ["Type2"]
+            : ["Type1", "Type2"]
+        }
         onSelectTile={handleTileSelect}
         excludedTileIds={placedTileIds}
       />

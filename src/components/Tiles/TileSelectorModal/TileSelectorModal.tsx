@@ -10,7 +10,7 @@ import { TileType, TileConfig, availableTiles } from "../../../config/availableT
 interface TileSelectorModalProps {
   open: boolean;
   onClose: () => void;
-  tileType: TileType;
+  allowedTypes: TileType[];
   onSelectTile: (tileId: string) => void;
   excludedTileIds: string[];
 }
@@ -18,13 +18,13 @@ interface TileSelectorModalProps {
 const TileSelectorModal: React.FC<TileSelectorModalProps> = ({
   open,
   onClose,
-  tileType,
+  allowedTypes,
   onSelectTile,
   excludedTileIds,
 }) => {
-  // Filter tiles by type and exclude already placed tiles
+  // Filter tiles by allowed types and exclude already placed tiles
   const availableForSelection = availableTiles.filter(
-    (tile) => tile.type === tileType && !excludedTileIds.includes(tile.id)
+    (tile) => allowedTypes.includes(tile.type) && !excludedTileIds.includes(tile.id)
   );
 
   const handleTileClick = (tileId: string) => {
@@ -32,15 +32,21 @@ const TileSelectorModal: React.FC<TileSelectorModalProps> = ({
     onClose();
   };
 
+  const getTitle = () => {
+    if (allowedTypes.length === 1) {
+      return `Select ${allowedTypes[0] === "Type1" ? "a Simple" : "a Sparkline"} Tile`;
+    }
+    return "Select a Tile";
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Select {tileType === "Type1" ? "a Simple" : "a Sparkline"} Tile</DialogTitle>
+      <DialogTitle>{getTitle()}</DialogTitle>
       <DialogContent>
         {availableForSelection.length === 0 ? (
           <Box sx={{ py: 4, textAlign: "center" }}>
             <Typography color="text.secondary">
-              No more tiles available. All {tileType === "Type1" ? "simple" : "sparkline"} tiles are
-              already in use.
+              No more tiles available. All tiles are already in use.
             </Typography>
           </Box>
         ) : (
