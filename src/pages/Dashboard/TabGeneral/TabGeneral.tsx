@@ -18,6 +18,10 @@ interface TabGeneralProps {
   index: number;
 }
 
+// Height constants for tiles and slots
+const QUADRANT_HEIGHT = 120; // Height of each quadrant tile in pixels
+const SLOT_HEIGHT = QUADRANT_HEIGHT * 2 + 8; // Total slot height: 2 quadrants + gap (248px)
+
 // Component to render a single tile based on its configuration
 interface TileRendererProps {
   tileId: string;
@@ -153,7 +157,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
           sx={{
             width: "100%",
             height: "100%",
-            minHeight: "200px",
+            minHeight: `${SLOT_HEIGHT}px`,
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gridTemplateRows: "1fr 1fr",
@@ -164,7 +168,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
             <Box
               key={`quadrant-${quadrant}`}
               sx={{
-                minHeight: "95px",
+                minHeight: `${QUADRANT_HEIGHT}px`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -243,7 +247,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                     md: "1 1 calc(50% - 12px)",
                   },
                   minWidth: { xs: "100%", md: "300px" },
-                  minHeight: "200px",
+                  minHeight: `${SLOT_HEIGHT}px`,
                 }}
               >
                 {renderSlot(slotContent, 1, slotIndex)}
@@ -268,7 +272,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                     md: "1 1 calc(50% - 12px)",
                   },
                   minWidth: { xs: "100%", md: "300px" },
-                  minHeight: "200px",
+                  minHeight: `${SLOT_HEIGHT}px`,
                 }}
               >
                 {renderSlot(slotContent, 2, slotIndex)}

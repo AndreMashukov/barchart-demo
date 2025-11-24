@@ -3,6 +3,10 @@ import Box from "@mui/material/Box";
 import AddIcon from "@mui/icons-material/Add";
 import Fade from "@mui/material/Fade";
 
+// Height constants to match TabGeneral
+const QUADRANT_HEIGHT = 120; // Height of each quadrant tile in pixels
+const SLOT_HEIGHT = QUADRANT_HEIGHT * 2 + 8; // Total slot height: 2 quadrants + gap (248px)
+
 interface Type2PlaceholderProps {
   onQuadrantClick: (quadrant: number) => void;
   onCenterClick: () => void;
@@ -14,7 +18,7 @@ const Type2Placeholder: React.FC<Type2PlaceholderProps> = ({ onQuadrantClick, on
       <Box
         sx={{
           width: "100%",
-          minHeight: "200px",
+          minHeight: `${SLOT_HEIGHT}px`,
           height: "100%",
           border: "2px dashed",
           borderColor: "grey.400",
