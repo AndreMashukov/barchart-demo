@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
+import AddIcon from "@mui/icons-material/Add";
 import TabPanel from "../../../components/TabPanel";
 import SimpleTile from "../../../components/Tiles/SimpleTile/SimpleTile";
 import SparklineTileBarCol from "../../../components/Tiles/SparklineTileBarCol/SparklineTileBarCol";
@@ -10,7 +10,7 @@ import TileSelectorModal from "../../../components/Tiles/TileSelectorModal";
 import EditableTileWrapper from "../../../components/Tiles/EditableTileWrapper";
 import EmptyTilesState from "../../../components/Tiles/EmptyTilesState";
 import { useTileEdit, SlotContent } from "../../../context/TileEditContext";
-import { getTileConfigById, TileType } from "../../../config/availableTiles";
+import { getTileConfigById } from "../../../config/availableTiles";
 import { useTileData } from "../../../hooks/useTileData";
 
 interface TabGeneralProps {
@@ -162,49 +162,51 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
             gridTemplateColumns: "1fr 1fr",
             gridTemplateRows: "1fr 1fr",
             gap: 1,
+            p: 1,
           }}
         >
           {slotContent.map((tileId, quadrant) => (
-            <Box
-              key={`quadrant-${quadrant}`}
-              sx={{
-                minHeight: `${QUADRANT_HEIGHT}px`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {tileId ? (
-                <TileRenderer
-                  tileId={tileId}
-                  editMode={state.editMode}
-                  onRemove={() => handleRemoveQuadrantTile(row, slotIndex, quadrant)}
-                />
-              ) : state.editMode ? (
-                <Box
-                  onClick={() => handleQuadrantClick(row, slotIndex, quadrant)}
-                  sx={{
-                    width: "100%",
-                    height: "100%",
-                    border: "1px dashed",
-                    borderColor: "grey.300",
-                    borderRadius: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    backgroundColor: "grey.50",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      backgroundColor: "grey.100",
+            tileId ? (
+              <TileRenderer
+                key={`quadrant-${quadrant}`}
+                tileId={tileId}
+                editMode={state.editMode}
+                onRemove={() => handleRemoveQuadrantTile(row, slotIndex, quadrant)}
+              />
+            ) : state.editMode ? (
+              <Box
+                key={`quadrant-${quadrant}`}
+                onClick={() => handleQuadrantClick(row, slotIndex, quadrant)}
+                sx={{
+                  border: "1px dashed",
+                  borderColor: "grey.300",
+                  borderRadius: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  backgroundColor: "grey.50",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    borderColor: "primary.main",
+                    backgroundColor: "grey.100",
+                    "& .add-icon": {
+                      color: "primary.main",
+                      transform: "scale(1.2)",
                     },
+                  },
+                }}
+              >
+                <AddIcon
+                  className="add-icon"
+                  sx={{
+                    fontSize: 32,
+                    color: "grey.400",
+                    transition: "all 0.3s ease",
                   }}
-                >
-                  <Typography variant="caption" color="grey.500">+</Typography>
-                </Box>
-              ) : null}
-            </Box>
+                />
+              </Box>
+            ) : null
           ))}
         </Box>
       );
