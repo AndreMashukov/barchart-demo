@@ -206,7 +206,10 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                   }}
                 />
               </Box>
-            ) : null
+            ) : (
+              // Empty placeholder in view mode to maintain grid structure
+              <Box key={`quadrant-${quadrant}`} />
+            )
           ))}
         </Box>
       );
