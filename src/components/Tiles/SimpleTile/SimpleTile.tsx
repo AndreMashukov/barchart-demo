@@ -46,6 +46,10 @@ const SimpleTile = ({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        padding: "8px",
+        "&:last-child": {
+          paddingBottom: "8px",
+        },
       }}
     >
       <Typography
@@ -65,7 +69,7 @@ const SimpleTile = ({
         sx={{
           fontSize: "0.8rem",
           textAlign: "center",
-          marginTop: theme.spacing(1),
+          marginTop: theme.spacing(0.5),
           marginBottom: 0,
           paddingBottom: 0,
           lineHeight: "0.8rem",
