@@ -162,7 +162,6 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
             gridTemplateColumns: "1fr 1fr",
             gridTemplateRows: "1fr 1fr",
             gap: 1,
-            p: 1,
           }}
         >
           {slotContent.map((tileId, quadrant) => (
