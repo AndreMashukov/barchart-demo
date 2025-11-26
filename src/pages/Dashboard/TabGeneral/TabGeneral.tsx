@@ -9,7 +9,7 @@ import Type2Placeholder from "../../../components/Tiles/Type2Placeholder";
 import TileSelectorModal from "../../../components/Tiles/TileSelectorModal";
 import EditableTileWrapper from "../../../components/Tiles/EditableTileWrapper";
 import EmptyTilesState from "../../../components/Tiles/EmptyTilesState";
-import { useTileEdit, SlotContent } from "../../../context/TileEditContext";
+import { useTileEdit, CompositeSlotContent } from "../../../context/TileEditContext";
 import { getTileConfigById } from "../../../config/availableTiles";
 import { useTileData } from "../../../hooks/useTileData";
 
@@ -18,9 +18,9 @@ interface TabGeneralProps {
   index: number;
 }
 
-// Height constants for tiles and slots
+// Height constants for tiles and composite slots
 const QUADRANT_HEIGHT = 120; // Height of each quadrant tile in pixels
-const SLOT_HEIGHT = QUADRANT_HEIGHT * 2 + 8; // Total slot height: 2 quadrants + gap (248px)
+const COMPOSITE_SLOT_HEIGHT = QUADRANT_HEIGHT * 2 + 8; // Total composite slot height: 2 quadrants + gap (248px)
 
 // Component to render a single tile based on its configuration
 interface TileRendererProps {
@@ -85,50 +85,50 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
 };
 
 const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
-  const { state, addTileToQuadrant, addTileToCenter, removeTileFromQuadrant, removeEntireSlot } = useTileEdit();
+  const { state, addTileToQuadrant, addTileToCenter, removeTileFromQuadrant, removeEntireCompositeSlot } = useTileEdit();
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ 
+  const [selectedCompositeSlot, setSelectedCompositeSlot] = useState<{ 
     row: 1 | 2; 
-    slotIndex: number; 
+    compositeSlotIndex: number; 
     quadrant?: number; 
     isCenter?: boolean;
   } | null>(null);
 
-  const handleQuadrantClick = (row: 1 | 2, slotIndex: number, quadrant: number) => {
-    setSelectedSlot({ row, slotIndex, quadrant });
+  const handleQuadrantClick = (row: 1 | 2, compositeSlotIndex: number, quadrant: number) => {
+    setSelectedCompositeSlot({ row, compositeSlotIndex, quadrant });
     setModalOpen(true);
   };
 
-  const handleCenterClick = (row: 1 | 2, slotIndex: number) => {
-    setSelectedSlot({ row, slotIndex, isCenter: true });
+  const handleCenterClick = (row: 1 | 2, compositeSlotIndex: number) => {
+    setSelectedCompositeSlot({ row, compositeSlotIndex, isCenter: true });
     setModalOpen(true);
   };
 
   const handleTileSelect = (tileId: string) => {
-    if (selectedSlot) {
-      if (selectedSlot.isCenter) {
-        addTileToCenter(tileId, selectedSlot.row, selectedSlot.slotIndex);
-      } else if (selectedSlot.quadrant !== undefined) {
-        addTileToQuadrant(tileId, selectedSlot.row, selectedSlot.slotIndex, selectedSlot.quadrant);
+    if (selectedCompositeSlot) {
+      if (selectedCompositeSlot.isCenter) {
+        addTileToCenter(tileId, selectedCompositeSlot.row, selectedCompositeSlot.compositeSlotIndex);
+      } else if (selectedCompositeSlot.quadrant !== undefined) {
+        addTileToQuadrant(tileId, selectedCompositeSlot.row, selectedCompositeSlot.compositeSlotIndex, selectedCompositeSlot.quadrant);
       }
     }
   };
 
-  const handleRemoveQuadrantTile = (row: 1 | 2, slotIndex: number, quadrant: number) => {
-    removeTileFromQuadrant(row, slotIndex, quadrant);
+  const handleRemoveQuadrantTile = (row: 1 | 2, compositeSlotIndex: number, quadrant: number) => {
+    removeTileFromQuadrant(row, compositeSlotIndex, quadrant);
   };
 
-  const handleRemoveSlot = (row: 1 | 2, slotIndex: number) => {
-    removeEntireSlot(row, slotIndex);
+  const handleRemoveCompositeSlot = (row: 1 | 2, compositeSlotIndex: number) => {
+    removeEntireCompositeSlot(row, compositeSlotIndex);
   };
 
   // Get all currently placed tile IDs to exclude from selector
   const placedTileIds: string[] = [];
-  [...state.row1Tiles, ...state.row2Tiles].forEach((slot) => {
-    if (typeof slot === "string") {
-      placedTileIds.push(slot);
-    } else if (Array.isArray(slot)) {
-      slot.forEach((tileId) => {
+  [...state.row1CompositeSlots, ...state.row2CompositeSlots].forEach((compositeSlot) => {
+    if (typeof compositeSlot === "string") {
+      placedTileIds.push(compositeSlot);
+    } else if (Array.isArray(compositeSlot)) {
+      compositeSlot.forEach((tileId) => {
         if (tileId) placedTileIds.push(tileId);
       });
     }
@@ -137,45 +137,45 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
   // Check if dashboard is empty
   const isEmpty = !state.editMode && placedTileIds.length === 0;
 
-  // Render a slot (either quadrants with Type1 tiles or a single Type2 tile)
-  const renderSlot = (slotContent: SlotContent, row: 1 | 2, slotIndex: number) => {
+  // Render a composite slot (either quadrants with Type1 tiles or a single Type2 tile)
+  const renderCompositeSlot = (compositeSlotContent: CompositeSlotContent, row: 1 | 2, compositeSlotIndex: number) => {
     // Type2 tile (string)
-    if (typeof slotContent === "string") {
+    if (typeof compositeSlotContent === "string") {
       return (
         <TileRenderer
-          tileId={slotContent}
+          tileId={compositeSlotContent}
           editMode={state.editMode}
-          onRemove={() => handleRemoveSlot(row, slotIndex)}
+          onRemove={() => handleRemoveCompositeSlot(row, compositeSlotIndex)}
         />
       );
     }
 
     // Quadrants with Type1 tiles (array)
-    if (Array.isArray(slotContent)) {
+    if (Array.isArray(compositeSlotContent)) {
       return (
         <Box
           sx={{
             width: "100%",
             height: "100%",
-            minHeight: `${SLOT_HEIGHT}px`,
+            minHeight: `${COMPOSITE_SLOT_HEIGHT}px`,
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gridTemplateRows: "1fr 1fr",
             gap: 1,
           }}
         >
-          {slotContent.map((tileId, quadrant) => (
+          {compositeSlotContent.map((tileId, quadrant) => (
             tileId ? (
               <TileRenderer
                 key={`quadrant-${quadrant}`}
                 tileId={tileId}
                 editMode={state.editMode}
-                onRemove={() => handleRemoveQuadrantTile(row, slotIndex, quadrant)}
+                onRemove={() => handleRemoveQuadrantTile(row, compositeSlotIndex, quadrant)}
               />
             ) : state.editMode ? (
               <Box
                 key={`quadrant-${quadrant}`}
-                onClick={() => handleQuadrantClick(row, slotIndex, quadrant)}
+                onClick={() => handleQuadrantClick(row, compositeSlotIndex, quadrant)}
                 sx={{
                   border: "1px dashed",
                   borderColor: "grey.300",
@@ -214,12 +214,12 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
       );
     }
 
-    // Empty slot - show Type2Placeholder
+    // Empty composite slot - show Type2Placeholder
     if (state.editMode) {
       return (
         <Type2Placeholder
-          onQuadrantClick={(quadrant) => handleQuadrantClick(row, slotIndex, quadrant)}
-          onCenterClick={() => handleCenterClick(row, slotIndex)}
+          onQuadrantClick={(quadrant) => handleQuadrantClick(row, compositeSlotIndex, quadrant)}
+          onCenterClick={() => handleCenterClick(row, compositeSlotIndex)}
         />
       );
     }
@@ -233,7 +233,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
         <EmptyTilesState />
       ) : (
         <>
-          {/* Row 1: 2 slots (Type1 quadrants OR Type2) */}
+          {/* Row 1: 2 composite slots (Type1 quadrants OR Type2) */}
           <Box
             sx={{
               display: "flex",
@@ -242,24 +242,24 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
               mb: 3,
             }}
           >
-            {state.row1Tiles.map((slotContent, slotIndex) => (
+            {state.row1CompositeSlots.map((compositeSlotContent, compositeSlotIndex) => (
               <Box
-                key={`row1-${slotIndex}`}
+                key={`row1-composite-slot-${compositeSlotIndex}`}
                 sx={{
                   flex: {
                     xs: "1 1 100%",
                     md: "1 1 calc(50% - 12px)",
                   },
                   minWidth: { xs: "100%", md: "300px" },
-                  minHeight: `${SLOT_HEIGHT}px`,
+                  minHeight: `${COMPOSITE_SLOT_HEIGHT}px`,
                 }}
               >
-                {renderSlot(slotContent, 1, slotIndex)}
+                {renderCompositeSlot(compositeSlotContent, 1, compositeSlotIndex)}
               </Box>
             ))}
           </Box>
 
-          {/* Row 2: 2 slots (Type2 only) */}
+          {/* Row 2: 2 composite slots (Type2 only) */}
           <Box
             sx={{
               display: "flex",
@@ -267,19 +267,19 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
               gap: 3,
             }}
           >
-            {state.row2Tiles.map((slotContent, slotIndex) => (
+            {state.row2CompositeSlots.map((compositeSlotContent, compositeSlotIndex) => (
               <Box
-                key={`row2-${slotIndex}`}
+                key={`row2-composite-slot-${compositeSlotIndex}`}
                 sx={{
                   flex: {
                     xs: "1 1 100%",
                     md: "1 1 calc(50% - 12px)",
                   },
                   minWidth: { xs: "100%", md: "300px" },
-                  minHeight: `${SLOT_HEIGHT}px`,
+                  minHeight: `${COMPOSITE_SLOT_HEIGHT}px`,
                 }}
               >
-                {renderSlot(slotContent, 2, slotIndex)}
+                {renderCompositeSlot(compositeSlotContent, 2, compositeSlotIndex)}
               </Box>
             ))}
           </Box>
@@ -291,11 +291,11 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         allowedTypes={
-          selectedSlot?.isCenter
+          selectedCompositeSlot?.isCenter
             ? ["Type2"]
-            : selectedSlot?.quadrant !== undefined
+            : selectedCompositeSlot?.quadrant !== undefined
             ? ["Type1"]
-            : selectedSlot?.row === 2
+            : selectedCompositeSlot?.row === 2
             ? ["Type2"]
             : ["Type1", "Type2"]
         }

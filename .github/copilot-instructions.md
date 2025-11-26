@@ -11,9 +11,10 @@ React + TypeScript dashboard application featuring D3.js data visualizations, Ma
   - All pages should be children of `<Page>` component (see `src/App.tsx`)
   - Header is fixed, sidebar is collapsible with state managed via `PageContext`
 
-- **Tile System**: Configuration-driven widget dashboard
+- **Tile System**: Configuration-driven widget dashboard with composite slot architecture
   - Tile configs in `src/config/availableTiles.ts` define: `id`, `type`, `component`, `label`, `color`, `backgroundColor`, `dataSource`
-  - Two tile types: `Type1` (simple 4-column grid) and `Type2` (sparkline 2-column grid)
+  - Two tile types: `Type1` (simple tiles placed in quadrants) and `Type2` (full composite slot tiles)
+  - Composite slots can hold either 4 Type1 tiles (in quadrants) or 1 Type2 tile (filling entire slot)
   - State managed by `TileEditContext` with localStorage persistence
   - Mock data fetched via `useTileData` hook with simulated API delays (300-600ms)
 
@@ -83,7 +84,8 @@ npm run build         # Production build
 ## Common Gotchas
 
 ### localStorage Integration
-- `TileEditContext` persists row1Tiles/row2Tiles to localStorage key `dashboard-tile-configuration`
+- `TileEditContext` persists row1CompositeSlots/row2CompositeSlots to localStorage key `dashboard-tile-configuration`
+- Backward compatibility: reads old `row1Tiles`/`row2Tiles` keys if new keys not found
 - Always handle SSR/hydration: check `typeof window !== 'undefined'` before accessing localStorage
 - Edit mode state (`editMode`) is NOT persisted - always starts false
 
