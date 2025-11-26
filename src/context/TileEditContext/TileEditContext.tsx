@@ -5,7 +5,7 @@ const STORAGE_KEY = "dashboard-tile-configuration";
 
 // Each composite slot can contain either:
 // - An array of 4 Type1 tile IDs (quadrants: [TL, TR, BL, BR])
-// - A single Type2 tile ID (string)
+// - A single tile ID (string) - can be either Type1 (full slot) or Type2
 export type CompositeSlotContent = [string | null, string | null, string | null, string | null] | string | null;
 
 export interface TileEditState {
@@ -100,7 +100,7 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
 
   const addTileToCenter = (tileId: string, row: 1 | 2, compositeSlotIndex: number) => {
     const compositeSlots = row === 1 ? [...state.row1CompositeSlots] : [...state.row2CompositeSlots];
-    compositeSlots[compositeSlotIndex] = tileId; // Replace entire composite slot with Type2 tile
+    compositeSlots[compositeSlotIndex] = tileId; // Replace entire composite slot with tile (Type1 or Type2)
     
     if (row === 1) {
       actions.setRow1CompositeSlots(compositeSlots);

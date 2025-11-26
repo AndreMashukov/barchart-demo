@@ -292,7 +292,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
         onClose={() => setModalOpen(false)}
         allowedTypes={
           selectedCompositeSlot?.isCenter
-            ? ["Type2"]
+            ? ["Type1", "Type2"] // Allow both Type1 and Type2 for center placement
             : selectedCompositeSlot?.quadrant !== undefined
             ? ["Type1"]
             : selectedCompositeSlot?.row === 2
