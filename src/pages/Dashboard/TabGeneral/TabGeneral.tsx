@@ -238,7 +238,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
             sx={{
               display: "flex",
               flexWrap: "wrap",
-              gap: 3,
+              gap: 1,
               mb: 3,
             }}
           >
@@ -248,7 +248,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                 sx={{
                   flex: {
                     xs: "1 1 100%",
-                    md: "1 1 calc(50% - 12px)",
+                    md: "1 1 calc(50% - 4px)",
                   },
                   minWidth: { xs: "100%", md: "300px" },
                   minHeight: `${COMPOSITE_SLOT_HEIGHT}px`,
@@ -264,7 +264,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
             sx={{
               display: "flex",
               flexWrap: "wrap",
-              gap: 3,
+              gap: 1,
             }}
           >
             {state.row2CompositeSlots.map((compositeSlotContent, compositeSlotIndex) => (
@@ -273,7 +273,7 @@ const TabGeneral: React.FC<TabGeneralProps> = ({ value, index }) => {
                 sx={{
                   flex: {
                     xs: "1 1 100%",
-                    md: "1 1 calc(50% - 12px)",
+                    md: "1 1 calc(50% - 4px)",
                   },
                   minWidth: { xs: "100%", md: "300px" },
                   minHeight: `${COMPOSITE_SLOT_HEIGHT}px`,
