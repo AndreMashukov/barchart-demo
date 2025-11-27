@@ -51,7 +51,7 @@ const DashboardContent: React.FC = () => {
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={handleAddTileClick}
-                sx={{ textTransform: "none" }}
+                sx={{ textTransform: "none", color: "white" }}
               >
                 Add Tile
               </Button>
