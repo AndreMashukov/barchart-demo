@@ -1,26 +1,39 @@
 import React, { createContext, useContext, useEffect, ReactNode } from "react";
 import { useBaseReducer } from "../../hooks/useBaseReducer";
+import { Layout } from "react-grid-layout";
 
 const STORAGE_KEY = "dashboard-tile-configuration";
 
-// Each composite slot can contain either:
-// - An array of 4 Type1 tile IDs (quadrants: [TL, TR, BL, BR])
-// - A single tile ID (string) - can be either Type1 (full slot) or Type2
-export type CompositeSlotContent = [string | null, string | null, string | null, string | null] | string | null;
+// Grid item represents a single tile in the dashboard
+export interface GridItem extends Layout {
+  i: string; // tile ID
+  x: number; // grid column position
+  y: number; // grid row position  
+  w: number; // width in grid units
+  h: number; // height in grid units
+  minW?: number;
+  maxW?: number;
+  minH?: number;
+  maxH?: number;
+  static?: boolean; // if true, item can't be dragged or resized
+}
 
 export interface TileEditState {
   editMode: boolean;
-  row1CompositeSlots: CompositeSlotContent[];
-  row2CompositeSlots: CompositeSlotContent[];
+  layouts: {
+    lg: GridItem[];
+    md: GridItem[];
+    sm: GridItem[];
+    xs: GridItem[];
+  };
 }
 
 interface TileEditContextValue {
   state: TileEditState;
   toggleEditMode: () => void;
-  addTileToQuadrant: (tileId: string, row: 1 | 2, compositeSlotIndex: number, quadrant: number) => void;
-  addTileToCenter: (tileId: string, row: 1 | 2, compositeSlotIndex: number) => void;
-  removeTileFromQuadrant: (row: 1 | 2, compositeSlotIndex: number, quadrant: number) => void;
-  removeEntireCompositeSlot: (row: 1 | 2, compositeSlotIndex: number) => void;
+  addTile: (tileId: string) => void;
+  removeTile: (tileId: string) => void;
+  updateLayouts: (layouts: { lg: GridItem[]; md: GridItem[]; sm: GridItem[]; xs: GridItem[] }) => void;
 }
 
 const TileEditContext = createContext<TileEditContextValue | undefined>(undefined);
@@ -36,22 +49,28 @@ const getInitialState = (): TileEditState => {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        return {
-          editMode: false, // Always start in view mode
-          row1CompositeSlots: parsed.row1CompositeSlots || parsed.row1Tiles || [null, null],
-          row2CompositeSlots: parsed.row2CompositeSlots || parsed.row2Tiles || [null, null],
-        };
+        // If new format exists, use it
+        if (parsed.layouts) {
+          return {
+            editMode: false,
+            layouts: parsed.layouts,
+          };
+        }
       } catch (e) {
         console.error("Failed to parse stored tile configuration:", e);
       }
     }
   }
 
-  // Default state: 2 empty composite slots per row
+  // Default state: empty grid
   return {
     editMode: false,
-    row1CompositeSlots: [null, null],
-    row2CompositeSlots: [null, null],
+    layouts: {
+      lg: [],
+      md: [],
+      sm: [],
+      xs: [],
+    },
   };
 };
 
@@ -61,92 +80,82 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
     initialState,
   });
 
-  // Persist to localStorage whenever composite slot configuration changes
+  // Persist to localStorage whenever layouts change
   useEffect(() => {
     if (typeof window !== "undefined") {
       const toStore = {
-        row1CompositeSlots: state.row1CompositeSlots,
-        row2CompositeSlots: state.row2CompositeSlots,
+        layouts: state.layouts,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
     }
-  }, [state.row1CompositeSlots, state.row2CompositeSlots]);
+  }, [state.layouts]);
 
   const toggleEditMode = () => {
     actions.setEditMode(!state.editMode);
   };
 
-  const addTileToQuadrant = (tileId: string, row: 1 | 2, compositeSlotIndex: number, quadrant: number) => {
-    const compositeSlots = row === 1 ? [...state.row1CompositeSlots] : [...state.row2CompositeSlots];
-    const currentCompositeSlot = compositeSlots[compositeSlotIndex];
-    
-    // Initialize quadrants array if composite slot is empty or has a Type2 tile
-    let quadrants: [string | null, string | null, string | null, string | null];
-    if (Array.isArray(currentCompositeSlot)) {
-      quadrants = [...currentCompositeSlot] as [string | null, string | null, string | null, string | null];
-    } else {
-      quadrants = [null, null, null, null];
+  const addTile = (tileId: string) => {
+    const { getTileConfigById } = require("../../config/availableTiles");
+    const config = getTileConfigById(tileId);
+    if (!config) return;
+
+    // Determine tile dimensions based on type
+    const isType2 = config.type === "Type2";
+    const w = isType2 ? 6 : 3; // Type2 = half width, Type1 = quarter width
+    const h = isType2 ? 4 : 2; // Type2 = 4 rows, Type1 = 2 rows
+
+    // Find next available position
+    const lgLayout = [...state.layouts.lg];
+    let x = 0;
+    let y = 0;
+
+    // Simple algorithm: find first available spot
+    if (lgLayout.length > 0) {
+      const maxY = Math.max(...lgLayout.map(item => item.y + item.h));
+      y = maxY;
     }
-    
-    quadrants[quadrant] = tileId;
-    compositeSlots[compositeSlotIndex] = quadrants;
-    
-    if (row === 1) {
-      actions.setRow1CompositeSlots(compositeSlots);
-    } else {
-      actions.setRow2CompositeSlots(compositeSlots);
-    }
+
+    const newItem: GridItem = {
+      i: tileId,
+      x,
+      y,
+      w,
+      h,
+      minW: isType2 ? 4 : 2,
+      minH: isType2 ? 3 : 2,
+    };
+
+    // Add to all breakpoints with appropriate sizing
+    const newLayouts = {
+      lg: [...state.layouts.lg, newItem],
+      md: [...state.layouts.md, { ...newItem, w: isType2 ? 5 : 3 }],
+      sm: [...state.layouts.sm, { ...newItem, w: 6, x: 0 }], // Full width on small screens
+      xs: [...state.layouts.xs, { ...newItem, w: 4, x: 0 }], // Full width on mobile
+    };
+
+    actions.setLayouts(newLayouts);
   };
 
-  const addTileToCenter = (tileId: string, row: 1 | 2, compositeSlotIndex: number) => {
-    const compositeSlots = row === 1 ? [...state.row1CompositeSlots] : [...state.row2CompositeSlots];
-    compositeSlots[compositeSlotIndex] = tileId; // Replace entire composite slot with tile (Type1 or Type2)
-    
-    if (row === 1) {
-      actions.setRow1CompositeSlots(compositeSlots);
-    } else {
-      actions.setRow2CompositeSlots(compositeSlots);
-    }
+  const removeTile = (tileId: string) => {
+    const newLayouts = {
+      lg: state.layouts.lg.filter(item => item.i !== tileId),
+      md: state.layouts.md.filter(item => item.i !== tileId),
+      sm: state.layouts.sm.filter(item => item.i !== tileId),
+      xs: state.layouts.xs.filter(item => item.i !== tileId),
+    };
+    actions.setLayouts(newLayouts);
   };
 
-  const removeTileFromQuadrant = (row: 1 | 2, compositeSlotIndex: number, quadrant: number) => {
-    const compositeSlots = row === 1 ? [...state.row1CompositeSlots] : [...state.row2CompositeSlots];
-    const currentCompositeSlot = compositeSlots[compositeSlotIndex];
-    
-    if (Array.isArray(currentCompositeSlot)) {
-      const quadrants = [...currentCompositeSlot] as [string | null, string | null, string | null, string | null];
-      quadrants[quadrant] = null;
-      
-      // If all quadrants are empty, set composite slot to null
-      const allEmpty = quadrants.every(q => q === null);
-      compositeSlots[compositeSlotIndex] = allEmpty ? null : quadrants;
-      
-      if (row === 1) {
-        actions.setRow1CompositeSlots(compositeSlots);
-      } else {
-        actions.setRow2CompositeSlots(compositeSlots);
-      }
-    }
-  };
-
-  const removeEntireCompositeSlot = (row: 1 | 2, compositeSlotIndex: number) => {
-    const compositeSlots = row === 1 ? [...state.row1CompositeSlots] : [...state.row2CompositeSlots];
-    compositeSlots[compositeSlotIndex] = null;
-    
-    if (row === 1) {
-      actions.setRow1CompositeSlots(compositeSlots);
-    } else {
-      actions.setRow2CompositeSlots(compositeSlots);
-    }
+  const updateLayouts = (layouts: { lg: GridItem[]; md: GridItem[]; sm: GridItem[]; xs: GridItem[] }) => {
+    actions.setLayouts(layouts);
   };
 
   const value: TileEditContextValue = {
     state,
     toggleEditMode,
-    addTileToQuadrant,
-    addTileToCenter,
-    removeTileFromQuadrant,
-    removeEntireCompositeSlot,
+    addTile,
+    removeTile,
+    updateLayouts,
   };
 
   return <TileEditContext.Provider value={value}>{children}</TileEditContext.Provider>;
