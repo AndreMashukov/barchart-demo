@@ -15,6 +15,12 @@ const EditableTileWrapper: React.FC<EditableTileWrapperProps> = ({
   editMode,
   onRemove,
 }) => {
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onRemove();
+  };
+
   return (
     <Fade in={true} timeout={500}>
       <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
@@ -22,7 +28,10 @@ const EditableTileWrapper: React.FC<EditableTileWrapperProps> = ({
         {editMode && (
           <Fade in={editMode} timeout={300}>
             <IconButton
-              onClick={onRemove}
+              onClick={handleRemoveClick}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
               sx={{
                 position: "absolute",
                 top: 8,
