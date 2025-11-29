@@ -4,6 +4,18 @@ import { Layout } from "react-grid-layout";
 
 const STORAGE_KEY = "dashboard-tile-configuration";
 
+// Size constraints helper function
+const getSizeConstraints = (isType2: boolean) => {
+  // Size restrictions: Type1 = 300px, Type2 = 500px
+  // Row height = 60px, so max height = 300px / 60px = 5 rows (Type1), 500px / 60px ≈ 8 rows (Type2)
+  return {
+    minW: isType2 ? 4 : 2,
+    minH: isType2 ? 3 : 2,
+    maxW: isType2 ? 8 : 5, // Max width in grid columns (Type2 = ~500px, Type1 = ~300px at 12-column layout)
+    maxH: isType2 ? 8 : 5, // Max height in rows (Type2 = 480px, Type1 = 300px)
+  };
+};
+
 // Grid item represents a single tile in the dashboard
 export interface GridItem extends Layout {
   i: string; // tile ID
@@ -43,6 +55,27 @@ interface TileEditProviderProps {
 }
 
 const getInitialState = (): TileEditState => {
+  // Helper to apply size constraints to grid items
+  const applySizeConstraints = (items: GridItem[]): GridItem[] => {
+    const { getTileConfigById } = require("../../config/availableTiles");
+    
+    return items.map(item => {
+      const config = getTileConfigById(item.i);
+      if (!config) return item;
+      
+      const isType2 = config.type === "Type2";
+      const constraints = getSizeConstraints(isType2);
+      
+      return {
+        ...item,
+        minW: item.minW ?? constraints.minW,
+        minH: item.minH ?? constraints.minH,
+        maxW: item.maxW ?? constraints.maxW,
+        maxH: item.maxH ?? constraints.maxH,
+      };
+    });
+  };
+  
   // Try to load from localStorage
   if (typeof window !== "undefined") {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -53,7 +86,12 @@ const getInitialState = (): TileEditState => {
         if (parsed.layouts) {
           return {
             editMode: false,
-            layouts: parsed.layouts,
+            layouts: {
+              lg: applySizeConstraints(parsed.layouts.lg || []),
+              md: applySizeConstraints(parsed.layouts.md || []),
+              sm: applySizeConstraints(parsed.layouts.sm || []),
+              xs: applySizeConstraints(parsed.layouts.xs || []),
+            },
           };
         }
       } catch (e) {
@@ -104,6 +142,9 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
     const w = isType2 ? 6 : 3; // Type2 = half width, Type1 = quarter width
     const h = isType2 ? 4 : 2; // Type2 = 4 rows, Type1 = 2 rows
 
+    // Get size constraints
+    const constraints = getSizeConstraints(isType2);
+
     // Find next available position
     const lgLayout = [...state.layouts.lg];
     let x = 0;
@@ -121,16 +162,15 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
       y,
       w,
       h,
-      minW: isType2 ? 4 : 2,
-      minH: isType2 ? 3 : 2,
+      ...constraints,
     };
 
     // Add to all breakpoints with appropriate sizing
     const newLayouts = {
       lg: [...state.layouts.lg, newItem],
-      md: [...state.layouts.md, { ...newItem, w: isType2 ? 5 : 3 }],
-      sm: [...state.layouts.sm, { ...newItem, w: 6, x: 0 }], // Full width on small screens
-      xs: [...state.layouts.xs, { ...newItem, w: 4, x: 0 }], // Full width on mobile
+      md: [...state.layouts.md, { ...newItem, w: isType2 ? 5 : 3, maxW: isType2 ? 7 : 4 }],
+      sm: [...state.layouts.sm, { ...newItem, w: 6, x: 0, maxW: 6 }], // Full width on small screens
+      xs: [...state.layouts.xs, { ...newItem, w: 4, x: 0, maxW: 4 }], // Full width on mobile
     };
 
     actions.setLayouts(newLayouts);
