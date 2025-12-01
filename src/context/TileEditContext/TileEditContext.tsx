@@ -28,6 +28,7 @@ export interface GridItem extends Layout {
   minH?: number;
   maxH?: number;
   static?: boolean; // if true, item can't be dragged or resized
+  isBounded?: boolean; // if true, item can't be dragged outside the grid container
 }
 
 export interface TileEditState {
@@ -72,6 +73,7 @@ const getInitialState = (): TileEditState => {
         minH: item.minH ?? constraints.minH,
         maxW: item.maxW ?? constraints.maxW,
         maxH: item.maxH ?? constraints.maxH,
+        isBounded: item.isBounded ?? true,
       };
     });
   };
@@ -162,6 +164,7 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
       y,
       w,
       h,
+      isBounded: true,
       ...constraints,
     };
 
