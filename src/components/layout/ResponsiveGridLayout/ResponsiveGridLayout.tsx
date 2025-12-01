@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback, useState } from "react";
-import { Responsive, WidthProvider, Layout } from "react-grid-layout";
+import React, { useMemo, useCallback } from "react";
+import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -10,8 +10,6 @@ import SparklineTileBarCol from "../../Tiles/SparklineTileBarCol/SparklineTileBa
 import SparklineTileLineCol from "../../Tiles/SparklineTileLineCol/SparklineTileLineCol";
 import EditableTileWrapper from "../../Tiles/EditableTileWrapper";
 import { useTileData } from "../../../hooks/useTileData";
-
-const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive);
 
 interface TileRendererProps {
   tileId: string;
@@ -76,10 +74,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
 
 const ResponsiveGridLayout: React.FC = () => {
   const { state, removeTile, updateLayouts } = useTileEdit();
-  const [currentBreakpoint, setCurrentBreakpoint] = useState<string>("lg");
-  const [currentCols, setCurrentCols] = useState<number>(12);
-
-  const colsMap = { lg: 12, md: 10, sm: 6, xs: 4 };
+  const currentCols = 12; // Fixed 12-column layout
 
   // Memoize children to prevent unnecessary re-renders
   const children = useMemo(() => {
@@ -133,14 +128,9 @@ const ResponsiveGridLayout: React.FC = () => {
 
   // Memoize callback to prevent recreation
   const onLayoutChange = useCallback(
-    (currentLayout: Layout[], allLayouts: { [key: string]: Layout[] }) => {
-      // Validate and correct all layouts
-      const validatedLayouts = {
-        lg: validateLayout(allLayouts.lg || []),
-        md: validateLayout(allLayouts.md || []),
-        sm: validateLayout(allLayouts.sm || []),
-        xs: validateLayout(allLayouts.xs || []),
-      };
+    (currentLayout: Layout[]) => {
+      // Validate and correct layout
+      const validatedLayout = validateLayout(currentLayout);
 
       // Convert Layout[] to GridItem[]
       const convertToGridItems = (layouts: Layout[]): GridItem[] => {
@@ -159,11 +149,13 @@ const ResponsiveGridLayout: React.FC = () => {
         }));
       };
 
+      // Only update lg layout, copy to other breakpoints to maintain consistency
+      const lgGridItems = convertToGridItems(validatedLayout);
       const newLayouts = {
-        lg: convertToGridItems(validatedLayouts.lg),
-        md: convertToGridItems(validatedLayouts.md),
-        sm: convertToGridItems(validatedLayouts.sm),
-        xs: convertToGridItems(validatedLayouts.xs),
+        lg: lgGridItems,
+        md: lgGridItems,
+        sm: lgGridItems,
+        xs: lgGridItems,
       };
 
       updateLayouts(newLayouts);
@@ -268,11 +260,6 @@ const ResponsiveGridLayout: React.FC = () => {
     [currentCols]
   );
 
-  const onBreakpointChange = useCallback((breakpoint: string, cols: number) => {
-    setCurrentBreakpoint(breakpoint);
-    setCurrentCols(cols);
-  }, []);
-
   return (
     <Box 
       sx={{ 
@@ -282,14 +269,13 @@ const ResponsiveGridLayout: React.FC = () => {
         position: "relative"
       }}
     >
-      <ResponsiveGridLayoutWithWidth
+      <GridLayout
         className="layout"
-        layouts={state.layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-        cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+        layout={state.layouts.lg}
+        cols={12}
         rowHeight={60}
+        width={1200} // Fixed width to prevent responsiveness
         onLayoutChange={onLayoutChange}
-        onBreakpointChange={onBreakpointChange}
         onDrag={onDrag}
         onDragStop={onDragStop}
         onResizeStop={onResizeStop}
@@ -306,7 +292,7 @@ const ResponsiveGridLayout: React.FC = () => {
         verticalCompact={true}
       >
         {children}
-      </ResponsiveGridLayoutWithWidth>
+      </GridLayout>
     </Box>
   );
 };
