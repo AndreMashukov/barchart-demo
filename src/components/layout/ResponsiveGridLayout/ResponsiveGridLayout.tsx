@@ -283,7 +283,6 @@ const ResponsiveGridLayout: React.FC = () => {
         isResizable={state.editMode}
         isBounded={true}
         autoSize={true}
-        maxRows={20}
         compactType="vertical"
         preventCollision={false}
         margin={[8, 8]}
