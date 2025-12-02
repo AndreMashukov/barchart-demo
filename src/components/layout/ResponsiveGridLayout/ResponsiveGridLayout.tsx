@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useTileEdit, GridItem, getSizeConstraints } from "../../../context/TileEditContext";
@@ -11,13 +12,20 @@ import SparklineTileLineCol from "../../Tiles/SparklineTileLineCol/SparklineTile
 import EditableTileWrapper from "../../Tiles/EditableTileWrapper";
 import { useTileData } from "../../../hooks/useTileData";
 
+// Boundary configuration
+const MAX_VISIBLE_ROWS = 10;
+const ROW_HEIGHT = 60;
+const ROW_MARGIN = 8;
+const boundaryPixels = MAX_VISIBLE_ROWS * ROW_HEIGHT + (MAX_VISIBLE_ROWS - 1) * ROW_MARGIN;
+
 interface TileRendererProps {
   tileId: string;
   editMode: boolean;
   onRemove: () => void;
+  error?: boolean;
 }
 
-const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove }) => {
+const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove, error }) => {
   const config = getTileConfigById(tileId);
   const { data, loading } = useTileData(config?.dataSource || null);
 
@@ -33,6 +41,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
         loading={loading}
         color={config.color}
         backgroundColor={config.backgroundColor}
+        error={error}
       />
     );
   } else if (config.component === "SparklineTileBarCol") {
@@ -48,6 +57,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
         sparklineWidth={config.sparklineWidth}
         highlightRange={config.highlightRange}
         highlightColor={config.highlightColor}
+        error={error}
       />
     );
   } else if (config.component === "SparklineTileLineCol") {
@@ -61,6 +71,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove 
         sparklineData={(data?.sparklineData as Array<{ date: string; value: number }>) || []}
         sparklineHeight={config.sparklineHeight}
         sparklineWidth={config.sparklineWidth}
+        error={error}
       />
     );
   }
@@ -76,23 +87,33 @@ const ResponsiveGridLayout: React.FC = () => {
   const { state, removeTile, updateLayouts } = useTileEdit();
   const currentCols = 12; // Fixed 12-column layout
 
+  // Helper function to check if a tile exceeds the boundary
+  const tileExceedsBoundary = useCallback((tile: Layout | GridItem): boolean => {
+    const tileBottomRow = tile.y + tile.h;
+    return tileBottomRow > MAX_VISIBLE_ROWS;
+  }, []);
+
   // Memoize children to prevent unnecessary re-renders
   const children = useMemo(() => {
-    return state.layouts.lg.map((item) => (
-      <div
-        key={item.i}
-        style={{
-          height: "100%"
-        }}
-      >
-        <TileRenderer
-          tileId={item.i}
-          editMode={state.editMode}
-          onRemove={() => removeTile(item.i)}
-        />
-      </div>
-    ));
-  }, [state.layouts.lg, state.editMode, removeTile]);
+    return state.layouts.lg.map((item) => {
+      const exceedsBoundary = tileExceedsBoundary(item);
+      return (
+        <div
+          key={item.i}
+          style={{
+            height: "100%"
+          }}
+        >
+          <TileRenderer
+            tileId={item.i}
+            editMode={state.editMode}
+            onRemove={() => removeTile(item.i)}
+            error={exceedsBoundary}
+          />
+        </div>
+      );
+    });
+  }, [state.layouts.lg, state.editMode, removeTile, tileExceedsBoundary]);
 
   // Validate and correct layout positions to prevent out-of-bounds tiles
   const validateLayout = useCallback((layout: Layout[]): Layout[] => {
@@ -345,6 +366,47 @@ const ResponsiveGridLayout: React.FC = () => {
         position: "relative"
       }}
     >
+      {/* Boundary line indicator */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: `${boundaryPixels}px`,
+          left: 0,
+          right: 0,
+          height: "2px",
+          backgroundColor: "#ff4444",
+          zIndex: 1000,
+          pointerEvents: "none",
+          boxShadow: "0 0 8px rgba(255, 68, 68, 0.6)",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: "-1px",
+            height: "4px",
+            background: "linear-gradient(to bottom, transparent, rgba(255, 68, 68, 0.3), transparent)",
+          },
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            position: "absolute",
+            left: 8,
+            top: -20,
+            color: "#ff4444",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Boundary - tiles beyond this line will be removed
+        </Typography>
+      </Box>
       <GridLayout
         className="layout"
         layout={state.layouts.lg}

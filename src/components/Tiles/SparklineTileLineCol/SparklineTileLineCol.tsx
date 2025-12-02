@@ -14,6 +14,7 @@ interface SparklineTileLineColProps {
   backgroundColor: string;
   clickable?: boolean;
   selected?: boolean;
+  error?: boolean;
   onClick?: () => void;
   labelStyle?: SxProps<Theme>;
   countStyle?: SxProps<Theme>;
@@ -35,6 +36,7 @@ const SparklineTileLineCol = ({
   backgroundColor,
   clickable,
   selected,
+  error,
   onClick,
   labelStyle,
   countStyle,
@@ -52,6 +54,7 @@ const SparklineTileLineCol = ({
       clickable={clickable}
       onClick={onClick}
       selected={selected}
+      error={error}
       contentSx={{
         width,
         height,

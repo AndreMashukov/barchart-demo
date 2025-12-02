@@ -11,6 +11,7 @@ interface SimpleTileProps {
   backgroundColor: string;
   clickable?: boolean;
   selected?: boolean;
+  error?: boolean;
   onClick?: () => void;
   labelStyle?: SxProps<Theme>;
   countStyle?: SxProps<Theme>;
@@ -26,6 +27,7 @@ const SimpleTile = ({
   backgroundColor,
   clickable,
   selected,
+  error,
   onClick,
   labelStyle,
   countStyle,
@@ -39,6 +41,7 @@ const SimpleTile = ({
       clickable={clickable}
       onClick={onClick}
       selected={selected}
+      error={error}
       contentSx={{
         width,
         height,
