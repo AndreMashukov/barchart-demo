@@ -3,7 +3,7 @@ import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { useTileEdit, GridItem } from "../../../context/TileEditContext";
+import { useTileEdit, GridItem, getSizeConstraints } from "../../../context/TileEditContext";
 import { getTileConfigById } from "../../../config/availableTiles";
 import SimpleTile from "../../Tiles/SimpleTile/SimpleTile";
 import SparklineTileBarCol from "../../Tiles/SparklineTileBarCol/SparklineTileBarCol";
@@ -126,6 +126,38 @@ const ResponsiveGridLayout: React.FC = () => {
     });
   }, [currentCols]);
 
+  // Validate constraints for grid items
+  const validateGridItemConstraints = useCallback((items: GridItem[]): GridItem[] => {
+    return items.map(item => {
+      const config = getTileConfigById(item.i);
+      if (!config) return item;
+      
+      const isType2 = config.type === "Type2";
+      const constraints = getSizeConstraints(isType2);
+      const minH = item.minH ?? constraints.minH;
+      const maxH = item.maxH ?? constraints.maxH;
+      
+      let fixed = { ...item };
+      
+      // Fix maxH if it's less than minH
+      if (maxH < minH) {
+        fixed.maxH = Math.max(constraints.maxH, minH);
+      }
+      
+      // Fix maxH if it's less than current height
+      if (fixed.maxH! < item.h) {
+        fixed.maxH = Math.max(constraints.maxH, item.h);
+      }
+      
+      // Fix minH if it's greater than maxH (after fixes)
+      if (fixed.minH! > fixed.maxH!) {
+        fixed.minH = Math.min(constraints.minH, fixed.maxH!);
+      }
+      
+      return fixed;
+    });
+  }, []);
+
   // Memoize callback to prevent recreation
   const onLayoutChange = useCallback(
     (currentLayout: Layout[]) => {
@@ -150,7 +182,11 @@ const ResponsiveGridLayout: React.FC = () => {
       };
 
       // Only update lg layout, copy to other breakpoints to maintain consistency
-      const lgGridItems = convertToGridItems(validatedLayout);
+      let lgGridItems = convertToGridItems(validatedLayout);
+      
+      // Validate constraints before saving
+      lgGridItems = validateGridItemConstraints(lgGridItems);
+      
       const newLayouts = {
         lg: lgGridItems,
         md: lgGridItems,
@@ -160,7 +196,7 @@ const ResponsiveGridLayout: React.FC = () => {
 
       updateLayouts(newLayouts);
     },
-    [updateLayouts, validateLayout]
+    [updateLayouts, validateLayout, validateGridItemConstraints]
   );
 
   // Constrain movement during drag to provide real-time feedback
@@ -225,39 +261,79 @@ const ResponsiveGridLayout: React.FC = () => {
     [currentCols]
   );
 
-  // Constrain resize operations
+  // Constrain resize operations and validate constraints
   const onResizeStop = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
+      const config = getTileConfigById(newItem.i);
+      if (!config) return;
+      
+      const isType2 = config.type === "Type2";
+      const constraints = getSizeConstraints(isType2);
+      
+      let correctedItem = { ...newItem };
       let needsCorrection = false;
       
       // Ensure resized tile doesn't exceed grid width
-      if (newItem.x + newItem.w > currentCols) {
-        newItem.w = currentCols - newItem.x;
+      if (correctedItem.x + correctedItem.w > currentCols) {
+        correctedItem.w = currentCols - correctedItem.x;
         needsCorrection = true;
       }
       
       // Prevent tiles from becoming too small
-      if (newItem.w < 1) {
-        newItem.w = 1;
+      if (correctedItem.w < 1) {
+        correctedItem.w = 1;
         needsCorrection = true;
       }
-      if (newItem.h < 1) {
-        newItem.h = 1;
+      if (correctedItem.h < 1) {
+        correctedItem.h = 1;
         needsCorrection = true;
       }
       
       // Limit maximum height to prevent excessive vertical space
       const maxHeight = 15;
-      if (newItem.h > maxHeight) {
-        newItem.h = maxHeight;
+      if (correctedItem.h > maxHeight) {
+        correctedItem.h = maxHeight;
+        needsCorrection = true;
+      }
+      
+      // Validate constraint relationships
+      const minH = correctedItem.minH ?? constraints.minH;
+      const maxH = correctedItem.maxH ?? constraints.maxH;
+      
+      // Fix maxH if it's less than minH
+      if (maxH < minH) {
+        correctedItem.maxH = Math.max(constraints.maxH, minH);
+        needsCorrection = true;
+      }
+      
+      // Fix maxH if it's less than current height
+      if (correctedItem.maxH! < correctedItem.h) {
+        correctedItem.maxH = Math.max(constraints.maxH, correctedItem.h);
+        needsCorrection = true;
+      }
+      
+      // Fix minH if it's greater than maxH (after fixes)
+      if (correctedItem.minH! > correctedItem.maxH!) {
+        correctedItem.minH = Math.min(constraints.minH, correctedItem.maxH!);
         needsCorrection = true;
       }
       
       if (needsCorrection) {
-        console.log(`Correcting tile ${newItem.i} size to [${newItem.w}x${newItem.h}]`);
+        console.log(`Correcting tile ${correctedItem.i} size and constraints`, {
+          size: `[${correctedItem.w}x${correctedItem.h}]`,
+          constraints: { minH: correctedItem.minH, maxH: correctedItem.maxH }
+        });
+        
+        // Update layout with corrected item
+        const correctedLayout = layout.map(item =>
+          item.i === correctedItem.i ? correctedItem : item
+        );
+        
+        // Trigger layout change with corrected layout
+        onLayoutChange(correctedLayout);
       }
     },
-    [currentCols]
+    [currentCols, onLayoutChange]
   );
 
   return (

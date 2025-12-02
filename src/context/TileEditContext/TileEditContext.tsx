@@ -5,7 +5,7 @@ import { Layout } from "react-grid-layout";
 const STORAGE_KEY = "dashboard-tile-configuration";
 
 // Size constraints helper function
-const getSizeConstraints = (isType2: boolean) => {
+export const getSizeConstraints = (isType2: boolean) => {
   // Size restrictions: Type1 = 300px, Type2 = 500px
   // Row height = 60px, so max height = 300px / 60px = 5 rows (Type1), 500px / 60px ≈ 8 rows (Type2)
   return {
@@ -14,6 +14,53 @@ const getSizeConstraints = (isType2: boolean) => {
     maxW: isType2 ? 8 : 5, // Max width in grid columns (Type2 = ~500px, Type1 = ~300px at 12-column layout)
     maxH: isType2 ? 8 : 5, // Max height in rows (Type2 = 480px, Type1 = 300px)
   };
+};
+
+// Validate and fix constraint conflicts
+// Ensures: maxH >= minH, maxH >= current height, minH <= current height
+const validateConstraints = (
+  item: GridItem,
+  defaultConstraints: ReturnType<typeof getSizeConstraints>
+): GridItem => {
+  const minH = item.minH ?? defaultConstraints.minH;
+  const maxH = item.maxH ?? defaultConstraints.maxH;
+  const currentH = item.h;
+  
+  let fixed = { ...item };
+  let wasFixed = false;
+  
+  // Rule 1: maxH must be >= minH
+  if (maxH < minH) {
+    fixed.maxH = Math.max(defaultConstraints.maxH, minH);
+    wasFixed = true;
+  }
+  
+  // Rule 2: maxH must be >= current height
+  if (fixed.maxH! < currentH) {
+    fixed.maxH = Math.max(defaultConstraints.maxH, currentH);
+    wasFixed = true;
+  }
+  
+  // Rule 3: minH must be <= maxH (after fixes)
+  if (minH > fixed.maxH!) {
+    fixed.minH = Math.min(defaultConstraints.minH, fixed.maxH!);
+    wasFixed = true;
+  }
+  
+  // Rule 4: Ensure minH <= current height (if current height is valid)
+  if (fixed.minH! > currentH) {
+    fixed.minH = Math.min(defaultConstraints.minH, currentH);
+    wasFixed = true;
+  }
+  
+  if (wasFixed) {
+    console.warn(`Fixed invalid constraints for tile ${item.i}`, {
+      before: { minH: item.minH, maxH: item.maxH, h: item.h },
+      after: { minH: fixed.minH, maxH: fixed.maxH, h: fixed.h }
+    });
+  }
+  
+  return fixed;
 };
 
 // Grid item represents a single tile in the dashboard
@@ -56,7 +103,7 @@ interface TileEditProviderProps {
 }
 
 const getInitialState = (): TileEditState => {
-  // Helper to apply size constraints to grid items
+  // Helper to apply size constraints to grid items and validate them
   const applySizeConstraints = (items: GridItem[]): GridItem[] => {
     const { getTileConfigById } = require("../../config/availableTiles");
     
@@ -67,7 +114,8 @@ const getInitialState = (): TileEditState => {
       const isType2 = config.type === "Type2";
       const constraints = getSizeConstraints(isType2);
       
-      return {
+      // Apply default constraints if not set
+      const itemWithDefaults = {
         ...item,
         minW: item.minW ?? constraints.minW,
         minH: item.minH ?? constraints.minH,
@@ -75,6 +123,9 @@ const getInitialState = (): TileEditState => {
         maxH: item.maxH ?? constraints.maxH,
         isBounded: item.isBounded ?? true,
       };
+      
+      // Validate and fix constraint conflicts
+      return validateConstraints(itemWithDefaults, constraints);
     });
   };
   

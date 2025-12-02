@@ -1,2 +1,2 @@
-export { TileEditProvider, useTileEdit } from "./TileEditContext";
+export { TileEditProvider, useTileEdit, getSizeConstraints } from "./TileEditContext";
 export type { TileEditState, GridItem } from "./TileEditContext";
