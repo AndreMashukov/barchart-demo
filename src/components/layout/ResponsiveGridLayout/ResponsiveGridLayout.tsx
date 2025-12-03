@@ -3,7 +3,7 @@ import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { useTileEdit, GridItem, getSizeConstraints } from "../../../context/TileEditContext";
+import { useTileEdit, GridItem } from "../../../context/TileEditContext";
 import { getTileConfigById } from "../../../config/availableTiles";
 import SimpleTile from "../../Tiles/SimpleTile/SimpleTile";
 import SparklineTileBarCol from "../../Tiles/SparklineTileBarCol/SparklineTileBarCol";
@@ -132,68 +132,14 @@ const ResponsiveGridLayout: React.FC = () => {
     });
   }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary]);
 
-  // Validate and correct layout positions to prevent out-of-bounds tiles
+  // No validation - return layout as-is
   const validateLayout = useCallback((layout: Layout[]): Layout[] => {
-    const maxY = 20; // Maximum allowed Y position
-    
-    return layout.map(item => {
-      const correctedItem = { ...item };
-      
-      // Horizontal constraints
-      if (correctedItem.x < 0) {
-        correctedItem.x = 0;
-      }
-      if (correctedItem.x + correctedItem.w > currentCols) {
-        correctedItem.x = Math.max(0, currentCols - correctedItem.w);
-      }
-      
-      // Vertical constraints
-      if (correctedItem.y < 0) {
-        correctedItem.y = 0;
-      }
-      if (correctedItem.y > maxY) {
-        correctedItem.y = maxY;
-      }
-      
-      // Size constraints
-      if (correctedItem.w < 1) correctedItem.w = 1;
-      if (correctedItem.h < 1) correctedItem.h = 1;
-      if (correctedItem.h > 15) correctedItem.h = 15;
-      
-      return correctedItem;
-    });
-  }, [currentCols]);
+    return layout;
+  }, []);
 
-  // Validate constraints for grid items
+  // No constraint validation - return items as-is
   const validateGridItemConstraints = useCallback((items: GridItem[]): GridItem[] => {
-    return items.map(item => {
-      const config = getTileConfigById(item.i);
-      if (!config) return item;
-      
-      const isType2 = config.type === "Type2";
-      const constraints = getSizeConstraints(isType2);
-      const minH = item.minH ?? constraints.minH;
-      const maxH = item.maxH ?? constraints.maxH;
-      
-      let fixed = { ...item };
-      
-      // Fix maxH if it's less than minH
-      if (maxH < minH) {
-        fixed.maxH = Math.max(constraints.maxH, minH);
-      }
-      
-      // Fix maxH if it's less than current height
-      if (fixed.maxH! < item.h) {
-        fixed.maxH = Math.max(constraints.maxH, item.h);
-      }
-      
-      // Fix minH if it's greater than maxH (after fixes)
-      if (fixed.minH! > fixed.maxH!) {
-        fixed.minH = Math.min(constraints.minH, fixed.maxH!);
-      }
-      
-      return fixed;
-    });
+    return items;
   }, []);
 
   // Memoize callback to prevent recreation
@@ -237,141 +183,28 @@ const ResponsiveGridLayout: React.FC = () => {
     [updateLayouts, validateLayout, validateGridItemConstraints]
   );
 
-  // Constrain movement during drag to provide real-time feedback
+  // No constraints during drag
   const onDrag = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
-      // Apply real-time constraints during drag
-      if (newItem.x < 0) {
-        newItem.x = 0;
-      }
-      if (newItem.x + newItem.w > currentCols) {
-        newItem.x = currentCols - newItem.w;
-      }
-      
-      const maxRows = 20;
-      if (newItem.y < 0) {
-        newItem.y = 0;
-      }
-      if (newItem.y > maxRows) {
-        newItem.y = maxRows;
-      }
+      // No restrictions applied
     },
-    [currentCols]
+    []
   );
 
-  // Enforce final constraints when drag stops
+  // No constraints when drag stops
   const onDragStop = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
-      let needsCorrection = false;
-      
-      // Constrain horizontal movement to grid bounds
-      if (newItem.x < 0) {
-        newItem.x = 0;
-        needsCorrection = true;
-      }
-      if (newItem.x + newItem.w > currentCols) {
-        newItem.x = currentCols - newItem.w;
-        needsCorrection = true;
-      }
-      
-      // Constrain vertical movement to prevent infinite scrolling
-      const maxRows = 20;
-      if (newItem.y < 0) {
-        newItem.y = 0;
-        needsCorrection = true;
-      }
-      if (newItem.y > maxRows) {
-        newItem.y = maxRows;
-        needsCorrection = true;
-      }
-      
-      if (needsCorrection) {
-        console.log(`Correcting tile ${newItem.i} position to [${newItem.x}, ${newItem.y}]`);
-        
-        // Force immediate layout update with corrected positions
-        const correctedLayout = layout.map(item => 
-          item.i === newItem.i ? { ...newItem } : item
-        );
-        
-        // This will trigger onLayoutChange with corrected layout
-      }
+      // No restrictions applied
     },
-    [currentCols]
+    []
   );
 
-  // Constrain resize operations and validate constraints
+  // No constraints on resize operations
   const onResizeStop = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
-      const config = getTileConfigById(newItem.i);
-      if (!config) return;
-      
-      const isType2 = config.type === "Type2";
-      const constraints = getSizeConstraints(isType2);
-      
-      let correctedItem = { ...newItem };
-      let needsCorrection = false;
-      
-      // Ensure resized tile doesn't exceed grid width
-      if (correctedItem.x + correctedItem.w > currentCols) {
-        correctedItem.w = currentCols - correctedItem.x;
-        needsCorrection = true;
-      }
-      
-      // Prevent tiles from becoming too small
-      if (correctedItem.w < 1) {
-        correctedItem.w = 1;
-        needsCorrection = true;
-      }
-      if (correctedItem.h < 1) {
-        correctedItem.h = 1;
-        needsCorrection = true;
-      }
-      
-      // Limit maximum height to prevent excessive vertical space
-      const maxHeight = 15;
-      if (correctedItem.h > maxHeight) {
-        correctedItem.h = maxHeight;
-        needsCorrection = true;
-      }
-      
-      // Validate constraint relationships
-      const minH = correctedItem.minH ?? constraints.minH;
-      const maxH = correctedItem.maxH ?? constraints.maxH;
-      
-      // Fix maxH if it's less than minH
-      if (maxH < minH) {
-        correctedItem.maxH = Math.max(constraints.maxH, minH);
-        needsCorrection = true;
-      }
-      
-      // Fix maxH if it's less than current height
-      if (correctedItem.maxH! < correctedItem.h) {
-        correctedItem.maxH = Math.max(constraints.maxH, correctedItem.h);
-        needsCorrection = true;
-      }
-      
-      // Fix minH if it's greater than maxH (after fixes)
-      if (correctedItem.minH! > correctedItem.maxH!) {
-        correctedItem.minH = Math.min(constraints.minH, correctedItem.maxH!);
-        needsCorrection = true;
-      }
-      
-      if (needsCorrection) {
-        console.log(`Correcting tile ${correctedItem.i} size and constraints`, {
-          size: `[${correctedItem.w}x${correctedItem.h}]`,
-          constraints: { minH: correctedItem.minH, maxH: correctedItem.maxH }
-        });
-        
-        // Update layout with corrected item
-        const correctedLayout = layout.map(item =>
-          item.i === correctedItem.i ? correctedItem : item
-        );
-        
-        // Trigger layout change with corrected layout
-        onLayoutChange(correctedLayout);
-      }
+      // No restrictions applied
     },
-    [currentCols, onLayoutChange]
+    []
   );
 
   return (
@@ -401,7 +234,7 @@ const ResponsiveGridLayout: React.FC = () => {
         onResizeStop={onResizeStop}
         isDraggable={state.editMode}
         isResizable={state.editMode}
-        isBounded={true}
+        isBounded={false}
         autoSize={true}
         compactType="vertical"
         preventCollision={false}
