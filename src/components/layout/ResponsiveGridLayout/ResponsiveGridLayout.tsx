@@ -378,12 +378,17 @@ const ResponsiveGridLayout: React.FC = () => {
     <Box 
       sx={{ 
         maxHeight: "80vh", 
-        minHeight: "200px",
-        overflow: "hidden",
+        minHeight: state.editMode ? `${boundaryPixels + 50}px` : "200px", // Ensure container is tall enough to show boundary line
+        overflow: state.editMode ? "auto" : "hidden", // Allow scrolling in edit mode to see boundary line
         position: "relative"
       }}
     >
-      <BoundaryLineIndicator topPosition={boundaryPixels} />
+      {state.editMode && (
+        <BoundaryLineIndicator 
+          key="boundary-line-indicator"
+          topPosition={boundaryPixels} 
+        />
+      )}
       <GridLayout
         className="layout"
         layout={state.layouts.lg}
