@@ -1,7 +1,6 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useTileEdit, GridItem, getSizeConstraints } from "../../../context/TileEditContext";
@@ -11,6 +10,7 @@ import SparklineTileBarCol from "../../Tiles/SparklineTileBarCol/SparklineTileBa
 import SparklineTileLineCol from "../../Tiles/SparklineTileLineCol/SparklineTileLineCol";
 import EditableTileWrapper from "../../Tiles/EditableTileWrapper";
 import { useTileData } from "../../../hooks/useTileData";
+import BoundaryLineIndicator from "./BoundaryLineIndicator";
 
 // Boundary configuration
 const MAX_VISIBLE_ROWS = 10;
@@ -87,16 +87,33 @@ const ResponsiveGridLayout: React.FC = () => {
   const { state, removeTile, updateLayouts } = useTileEdit();
   const currentCols = 12; // Fixed 12-column layout
 
+  // State variable to track tiles that cross or exceed the boundary
+  const [tilesExceedingBoundary, setTilesExceedingBoundary] = useState<Set<string>>(new Set());
+
   // Helper function to check if a tile exceeds the boundary
   const tileExceedsBoundary = useCallback((tile: Layout | GridItem): boolean => {
     const tileBottomRow = tile.y + tile.h;
     return tileBottomRow > MAX_VISIBLE_ROWS;
   }, []);
 
+  // Update state when layout changes to track tiles exceeding boundary
+  useEffect(() => {
+    const exceedingTiles = new Set<string>();
+    
+    state.layouts.lg.forEach((item) => {
+      if (tileExceedsBoundary(item)) {
+        exceedingTiles.add(item.i);
+      }
+    });
+    
+    setTilesExceedingBoundary(exceedingTiles);
+  }, [state.layouts.lg, tileExceedsBoundary]);
+
   // Memoize children to prevent unnecessary re-renders
   const children = useMemo(() => {
     return state.layouts.lg.map((item) => {
-      const exceedsBoundary = tileExceedsBoundary(item);
+      // Use state variable to check if tile exceeds boundary
+      const exceedsBoundary = tilesExceedingBoundary.has(item.i);
       return (
         <div
           key={item.i}
@@ -113,7 +130,7 @@ const ResponsiveGridLayout: React.FC = () => {
         </div>
       );
     });
-  }, [state.layouts.lg, state.editMode, removeTile, tileExceedsBoundary]);
+  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary]);
 
   // Validate and correct layout positions to prevent out-of-bounds tiles
   const validateLayout = useCallback((layout: Layout[]): Layout[] => {
@@ -366,47 +383,7 @@ const ResponsiveGridLayout: React.FC = () => {
         position: "relative"
       }}
     >
-      {/* Boundary line indicator */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: `${boundaryPixels}px`,
-          left: 0,
-          right: 0,
-          height: "2px",
-          backgroundColor: "#ff4444",
-          zIndex: 1000,
-          pointerEvents: "none",
-          boxShadow: "0 0 8px rgba(255, 68, 68, 0.6)",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: "-1px",
-            height: "4px",
-            background: "linear-gradient(to bottom, transparent, rgba(255, 68, 68, 0.3), transparent)",
-          },
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{
-            position: "absolute",
-            left: 8,
-            top: -20,
-            color: "#ff4444",
-            fontSize: "0.75rem",
-            fontWeight: "bold",
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            padding: "2px 6px",
-            borderRadius: "4px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Boundary - tiles beyond this line will be removed
-        </Typography>
-      </Box>
+      <BoundaryLineIndicator topPosition={boundaryPixels} />
       <GridLayout
         className="layout"
         layout={state.layouts.lg}
