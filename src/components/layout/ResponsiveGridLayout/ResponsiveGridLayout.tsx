@@ -1,6 +1,7 @@
-import React, { useMemo, useCallback, useState, useEffect } from "react";
+import React, { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
+import { useTheme, useMediaQuery } from "@mui/material";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useTileEdit, GridItem } from "../../../context/TileEditContext";
@@ -17,6 +18,8 @@ const MAX_VISIBLE_ROWS = 10;
 const ROW_HEIGHT = 60;
 const ROW_MARGIN = 8;
 const boundaryPixels = MAX_VISIBLE_ROWS * ROW_HEIGHT + (MAX_VISIBLE_ROWS - 1) * ROW_MARGIN;
+const REMOVAL_DELAY_MS = 1000; // 1 second delay before removal
+const FADE_OUT_DURATION_MS = 500; // Animation duration
 
 interface TileRendererProps {
   tileId: string;
@@ -85,10 +88,39 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove,
 
 const ResponsiveGridLayout: React.FC = () => {
   const { state, removeTile, updateLayouts } = useTileEdit();
+  const theme = useTheme();
+  const isSmBreakpoint = useMediaQuery(theme.breakpoints.down("sm")); // Below 600px
   const currentCols = 12; // Fixed 12-column layout
+
+  // Track window width for responsive layout
+  const [windowWidth, setWindowWidth] = useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+
+  // Update window width on resize
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // State variable to track tiles that cross or exceed the boundary
   const [tilesExceedingBoundary, setTilesExceedingBoundary] = useState<Set<string>>(new Set());
+  
+  // State variable to track tiles that are being removed (fading out)
+  const [tilesRemoving, setTilesRemoving] = useState<Set<string>>(new Set());
+  
+  // Ref to store timeout IDs for cleanup (stores both delay and removal timeouts)
+  interface TimeoutRef {
+    delayTimeout: NodeJS.Timeout;
+    removalTimeout?: NodeJS.Timeout;
+  }
+  const removalTimeoutsRef = useRef<Map<string, TimeoutRef>>(new Map());
 
   // Helper function to check if a tile exceeds the boundary
   const tileExceedsBoundary = useCallback((tile: Layout | GridItem): boolean => {
@@ -109,16 +141,92 @@ const ResponsiveGridLayout: React.FC = () => {
     setTilesExceedingBoundary(exceedingTiles);
   }, [state.layouts.lg, tileExceedsBoundary]);
 
+  // Handle automatic removal of tiles exceeding boundary after delay
+  useEffect(() => {
+    // Clean up any existing timeouts for tiles that no longer exceed boundary
+    tilesExceedingBoundary.forEach((tileId) => {
+      if (!removalTimeoutsRef.current.has(tileId)) {
+        // New tile exceeding boundary - wait 1 second, then start fade animation
+        const delayTimeout = setTimeout(() => {
+          // Start fade-out animation
+          setTilesRemoving((prev) => {
+            const newSet = new Set(prev);
+            newSet.add(tileId);
+            return newSet;
+          });
+
+          // Remove tile after fade animation completes
+          const removalTimeout = setTimeout(() => {
+            removeTile(tileId);
+            const timeoutRef = removalTimeoutsRef.current.get(tileId);
+            if (timeoutRef) {
+              removalTimeoutsRef.current.delete(tileId);
+            }
+            setTilesRemoving((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(tileId);
+              return newSet;
+            });
+          }, FADE_OUT_DURATION_MS);
+
+          // Update the ref to include the removal timeout
+          const timeoutRef = removalTimeoutsRef.current.get(tileId);
+          if (timeoutRef) {
+            timeoutRef.removalTimeout = removalTimeout;
+          }
+        }, REMOVAL_DELAY_MS);
+
+        // Store the initial delay timeout
+        removalTimeoutsRef.current.set(tileId, { delayTimeout });
+      }
+    });
+
+    // Clean up timeouts for tiles that no longer exceed boundary
+    removalTimeoutsRef.current.forEach((timeoutRef, tileId) => {
+      if (!tilesExceedingBoundary.has(tileId)) {
+        clearTimeout(timeoutRef.delayTimeout);
+        if (timeoutRef.removalTimeout) {
+          clearTimeout(timeoutRef.removalTimeout);
+        }
+        removalTimeoutsRef.current.delete(tileId);
+        setTilesRemoving((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(tileId);
+          return newSet;
+        });
+      }
+    });
+
+    // Cleanup function
+    return () => {
+      removalTimeoutsRef.current.forEach((timeoutRef) => {
+        clearTimeout(timeoutRef.delayTimeout);
+        if (timeoutRef.removalTimeout) {
+          clearTimeout(timeoutRef.removalTimeout);
+        }
+      });
+      removalTimeoutsRef.current.clear();
+    };
+  }, [tilesExceedingBoundary, removeTile]);
+
   // Memoize children to prevent unnecessary re-renders
   const children = useMemo(() => {
     return state.layouts.lg.map((item) => {
       // Use state variable to check if tile exceeds boundary
       const exceedsBoundary = tilesExceedingBoundary.has(item.i);
+      const isRemoving = tilesRemoving.has(item.i);
+      
       return (
         <div
           key={item.i}
           style={{
-            height: "100%"
+            height: "100%",
+            opacity: isRemoving ? 0 : 1,
+            transform: isRemoving ? "scale(0.95)" : "none",
+            // Only apply transition when removing, not during drag operations
+            transition: isRemoving 
+              ? `opacity ${FADE_OUT_DURATION_MS}ms ease-out, transform ${FADE_OUT_DURATION_MS}ms ease-out`
+              : "none",
           }}
         >
           <TileRenderer
@@ -130,7 +238,7 @@ const ResponsiveGridLayout: React.FC = () => {
         </div>
       );
     });
-  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary]);
+  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary, tilesRemoving]);
 
   // No validation - return layout as-is
   const validateLayout = useCallback((layout: Layout[]): Layout[] => {
@@ -142,9 +250,35 @@ const ResponsiveGridLayout: React.FC = () => {
     return items;
   }, []);
 
+  // Generate vertical stacked layout for sm breakpoint in view mode
+  const smViewLayout = useMemo(() => {
+    if (!isSmBreakpoint || state.editMode) {
+      return null; // Only generate for sm breakpoint in view mode
+    }
+
+    // Stack all tiles vertically with equal width (full width = 12 columns)
+    let currentY = 0;
+    return state.layouts.lg.map((item) => {
+      const stackedItem = {
+        ...item,
+        x: 0,
+        y: currentY,
+        w: 12, // Full width
+        h: item.h, // Keep original height
+      };
+      currentY += item.h; // Move next tile below this one
+      return stackedItem;
+    });
+  }, [isSmBreakpoint, state.editMode, state.layouts.lg]);
+
   // Memoize callback to prevent recreation
   const onLayoutChange = useCallback(
     (currentLayout: Layout[]) => {
+      // Don't save layout changes when in sm view mode (to preserve localStorage)
+      if (isSmBreakpoint && !state.editMode) {
+        return;
+      }
+
       // Validate and correct layout
       const validatedLayout = validateLayout(currentLayout);
 
@@ -180,7 +314,7 @@ const ResponsiveGridLayout: React.FC = () => {
 
       updateLayouts(newLayouts);
     },
-    [updateLayouts, validateLayout, validateGridItemConstraints]
+    [updateLayouts, validateLayout, validateGridItemConstraints, isSmBreakpoint, state.editMode]
   );
 
   // No constraints during drag
@@ -207,6 +341,23 @@ const ResponsiveGridLayout: React.FC = () => {
     []
   );
 
+  // Determine which layout to use: sm view mode layout or regular layout
+  const activeLayout = useMemo(() => {
+    if (smViewLayout) {
+      return smViewLayout;
+    }
+    return state.layouts.lg;
+  }, [smViewLayout, state.layouts.lg]);
+
+  // Determine if we should use responsive width for sm breakpoint
+  const gridWidth = useMemo(() => {
+    if (isSmBreakpoint && !state.editMode) {
+      // Use tracked window width for sm breakpoint in view mode
+      return windowWidth;
+    }
+    return 1200; // Fixed width for larger screens
+  }, [isSmBreakpoint, state.editMode, windowWidth]);
+
   return (
     <Box 
       sx={{ 
@@ -224,10 +375,10 @@ const ResponsiveGridLayout: React.FC = () => {
       )}
       <GridLayout
         className="layout"
-        layout={state.layouts.lg}
+        layout={activeLayout}
         cols={12}
         rowHeight={60}
-        width={1200} // Fixed width to prevent responsiveness
+        width={gridWidth}
         onLayoutChange={onLayoutChange}
         onDrag={onDrag}
         onDragStop={onDragStop}
