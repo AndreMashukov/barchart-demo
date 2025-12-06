@@ -25,10 +25,11 @@ interface TileRendererProps {
   tileId: string;
   editMode: boolean;
   onRemove: () => void;
+  onEdit?: () => void;
   error?: boolean;
 }
 
-const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove, error }) => {
+const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove, onEdit, error }) => {
   const config = getTileConfigById(tileId);
   const { data, loading } = useTileData(config?.dataSource || null);
 
@@ -80,7 +81,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove,
   }
 
   return (
-    <EditableTileWrapper editMode={editMode} onRemove={onRemove}>
+    <EditableTileWrapper editMode={editMode} onRemove={onRemove} onEdit={onEdit} editable={config.editable ?? false}>
       {tileContent}
     </EditableTileWrapper>
   );
@@ -233,6 +234,10 @@ const ResponsiveGridLayout: React.FC = () => {
             tileId={item.i}
             editMode={state.editMode}
             onRemove={() => removeTile(item.i)}
+            onEdit={() => {
+              // TODO: Implement tile editing functionality
+              console.log("Edit tile:", item.i);
+            }}
             error={exceedsBoundary}
           />
         </div>

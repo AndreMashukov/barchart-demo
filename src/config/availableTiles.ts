@@ -22,6 +22,7 @@ interface BaseTileConfig {
   color: string;
   backgroundColor: string;
   dataSource: TileDataSource;
+  editable?: boolean;
 }
 
 // Type1 tiles (SimpleTile) - no sparkline data
@@ -64,6 +65,7 @@ export const availableTiles: TileConfig[] = [
     color: "white",
     backgroundColor: indigo[900],
     dataSource: "totalCharts",
+    editable: true,
   },
   {
     id: "tile-active-users",
@@ -73,6 +75,7 @@ export const availableTiles: TileConfig[] = [
     color: "white",
     backgroundColor: orange[700],
     dataSource: "activeUsers",
+    editable: false,
   },
   {
     id: "tile-data-points",
@@ -82,6 +85,7 @@ export const availableTiles: TileConfig[] = [
     color: "white",
     backgroundColor: blue[500],
     dataSource: "dataPoints",
+    editable: true,
   },
   {
     id: "tile-uptime",
@@ -91,6 +95,7 @@ export const availableTiles: TileConfig[] = [
     color: "white",
     backgroundColor: green[600],
     dataSource: "uptime",
+    editable: false,
   },
 
   // Type2 Tiles (Sparkline Tiles)
@@ -106,6 +111,7 @@ export const availableTiles: TileConfig[] = [
     sparklineWidth: 200,
     highlightRange: [8, 11],
     highlightColor: purple[300],
+    editable: false,
   },
   {
     id: "tile-revenue",
@@ -117,6 +123,7 @@ export const availableTiles: TileConfig[] = [
     dataSource: "revenue",
     sparklineHeight: 40,
     sparklineWidth: 200,
+    editable: false,
   },
   {
     id: "tile-website-traffic",
@@ -128,6 +135,7 @@ export const availableTiles: TileConfig[] = [
     dataSource: "websiteTraffic",
     sparklineHeight: 40,
     sparklineWidth: 200,
+    editable: false,
   },
 ];
 
