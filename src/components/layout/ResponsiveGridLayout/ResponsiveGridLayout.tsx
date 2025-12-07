@@ -14,7 +14,7 @@ import { useTileData } from "../../../hooks/useTileData";
 import BoundaryLineIndicator from "./BoundaryLineIndicator";
 
 // Boundary configuration
-const MAX_VISIBLE_ROWS = 14;
+const MAX_VISIBLE_ROWS = 12;
 const ROW_HEIGHT = 60;
 const ROW_MARGIN = 8;
 const BOUNDARY_LINE_POSITION = MAX_VISIBLE_ROWS; // Controls which row the boundary line appears at

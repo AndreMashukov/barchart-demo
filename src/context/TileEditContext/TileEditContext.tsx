@@ -190,13 +190,11 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
     const config = getTileConfigById(tileId);
     if (!config) return;
 
-    // Determine tile dimensions based on type
+    // Determine tile dimensions based on type - use minimal size
     const isType2 = config.type === "Type2";
-    const w = isType2 ? 6 : 3; // Type2 = half width, Type1 = quarter width
-    const h = isType2 ? 4 : 2; // Type2 = 4 rows, Type1 = 2 rows
-
-    // Get size constraints
     const constraints = getSizeConstraints(isType2);
+    const w = constraints.minW; // Use minimal width
+    const h = constraints.minH; // Use minimal height
 
     // Find next available position
     const lgLayout = [...state.layouts.lg];
@@ -219,12 +217,12 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
       ...constraints,
     };
 
-    // Add to all breakpoints with appropriate sizing
+    // Add to all breakpoints with minimal sizing
     const newLayouts = {
       lg: [...state.layouts.lg, newItem],
-      md: [...state.layouts.md, { ...newItem, w: isType2 ? 5 : 3, maxW: isType2 ? 7 : 4 }],
-      sm: [...state.layouts.sm, { ...newItem, w: 6, x: 0, maxW: 6 }], // Full width on small screens
-      xs: [...state.layouts.xs, { ...newItem, w: 4, x: 0, maxW: 4 }], // Full width on mobile
+      md: [...state.layouts.md, { ...newItem, w: constraints.minW, maxW: isType2 ? 7 : 4 }],
+      sm: [...state.layouts.sm, { ...newItem, w: Math.min(constraints.minW, 6), x: 0, maxW: 6 }], // Respect minimal width on small screens
+      xs: [...state.layouts.xs, { ...newItem, w: Math.min(constraints.minW, 4), x: 0, maxW: 4 }], // Respect minimal width on mobile
     };
 
     actions.setLayouts(newLayouts);
