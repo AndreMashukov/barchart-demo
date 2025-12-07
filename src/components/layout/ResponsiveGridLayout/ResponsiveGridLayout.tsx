@@ -89,7 +89,7 @@ const TileRenderer: React.FC<TileRendererProps> = ({ tileId, editMode, onRemove,
 };
 
 const ResponsiveGridLayout: React.FC = () => {
-  const { state, removeTile, updateLayouts } = useTileEdit();
+  const { state, removeTile, updateLayouts, saveLayoutHistory, rollbackToLastValid } = useTileEdit();
   const theme = useTheme();
   const isSmBreakpoint = useMediaQuery(theme.breakpoints.down("sm")); // Below 600px
   const currentCols = 12; // Fixed 12-column layout
@@ -210,91 +210,37 @@ const ResponsiveGridLayout: React.FC = () => {
     return null; // No available space found
   }, []);
 
-  // Helper function to reposition a tile to available space using minimal size
-  const repositionTile = useCallback((tileId: string) => {
-    const currentLayout = [...state.layouts.lg];
-    const tileIndex = currentLayout.findIndex(item => item.i === tileId);
+  // Helper function to handle tiles that exceed boundary - no repositioning, just rollback/remove
+  const handleTileExceedingBoundary = useCallback((tileId: string) => {
+    console.warn(`Tile ${tileId} exceeds boundary. Rolling back to last valid layout.`);
     
-    if (tileIndex === -1) return;
+    // Attempt to rollback to last valid layout state
+    const rollbackResult = rollbackToLastValid();
     
-    const tileToReposition = currentLayout[tileIndex];
+    if (!rollbackResult.success) {
+      console.error(`Failed to rollback layout for tile ${tileId}. No valid history available. Removing tile.`);
+      removeTile(tileId);
+      return;
+    }
     
-    // Get minimal size for this tile from its constraints, fallback to reasonable defaults
-    const minTileWidth = Math.max(tileToReposition.minW || 2, 1);
-    const minTileHeight = Math.max(tileToReposition.minH || 2, 1);
-    
-    // Create a simplified version of findAvailableSpace that only looks for minimal size
-    const findMinimalSpace = (tileToPlace: Layout, currentLayout: Layout[]) => {
-      // Create a grid to track occupied spaces
-      const grid: boolean[][] = Array(MAX_VISIBLE_ROWS).fill(null).map(() => Array(12).fill(false));
-      
-      // Mark occupied spaces
-      currentLayout.forEach(item => {
-        if (item.i !== tileToPlace.i) {
-          for (let row = item.y; row < item.y + item.h && row < MAX_VISIBLE_ROWS; row++) {
-            for (let col = item.x; col < item.x + item.w && col < 12; col++) {
-              grid[row][col] = true;
-            }
-          }
-        }
+    // Check the restored layout for tiles still beyond boundary
+    if (rollbackResult.layouts) {
+      const tilesStillBeyondBoundary = rollbackResult.layouts.lg.filter(item => {
+        const tileBottomRow = item.y + item.h;
+        return tileBottomRow > MAX_VISIBLE_ROWS;
       });
       
-      // Find first available space for minimal size
-      for (let y = 0; y <= MAX_VISIBLE_ROWS - minTileHeight; y++) {
-        for (let x = 0; x <= 12 - minTileWidth; x++) {
-          // Check if we can fit the minimal size here
-          let canFit = true;
-          for (let row = y; row < y + minTileHeight && canFit; row++) {
-            for (let col = x; col < x + minTileWidth && canFit; col++) {
-              if (grid[row][col]) {
-                canFit = false;
-              }
-            }
-          }
-          
-          if (canFit) {
-            return {
-              x,
-              y,
-              w: minTileWidth,
-              h: minTileHeight
-            };
-          }
-        }
+      if (tilesStillBeyondBoundary.length > 0) {
+        console.warn(`Layout still invalid after rollback. Removing ${tilesStillBeyondBoundary.length} tiles beyond boundary.`);
+        
+        // Remove all tiles that are still beyond the boundary
+        tilesStillBeyondBoundary.forEach(tile => {
+          console.log(`Removing tile ${tile.i} - position (${tile.x}, ${tile.y}) with size (${tile.w}x${tile.h}) extends beyond boundary (bottom row: ${tile.y + tile.h})`);
+          removeTile(tile.i);
+        });
       }
-      
-      return null;
-    };
-    
-    const availableSpace = findMinimalSpace(tileToReposition, currentLayout);
-    
-    if (availableSpace) {
-      // Update the tile with new position and minimal size
-      const updatedTile = {
-        ...tileToReposition,
-        x: availableSpace.x,
-        y: availableSpace.y,
-        w: availableSpace.w,
-        h: availableSpace.h
-      };
-      
-      currentLayout[tileIndex] = updatedTile;
-      
-      // Update layouts
-      const newLayouts = {
-        lg: currentLayout,
-        md: currentLayout,
-        sm: currentLayout,
-        xs: currentLayout,
-      };
-      
-      updateLayouts(newLayouts);
-      
-      console.log(`Repositioned tile ${tileId} to minimal size (${minTileWidth}x${minTileHeight}) at position (${availableSpace.x}, ${availableSpace.y})`);
-    } else {
-      console.warn(`Could not find space to reposition tile ${tileId} with minimal size (${minTileWidth}x${minTileHeight})`);
     }
-  }, [state.layouts.lg, updateLayouts]);
+  }, [rollbackToLastValid, removeTile]);
 
   // Update state when layout changes to track tiles exceeding boundary
   useEffect(() => {
@@ -323,9 +269,9 @@ const ResponsiveGridLayout: React.FC = () => {
             return newSet;
           });
 
-          // Reposition tile after fade animation completes
+          // Handle tile after fade animation completes
           const repositioningTimeout = setTimeout(() => {
-            repositionTile(tileId);
+            handleTileExceedingBoundary(tileId);
             const timeoutRef = repositioningTimeoutsRef.current.get(tileId);
             if (timeoutRef) {
               repositioningTimeoutsRef.current.delete(tileId);
@@ -375,7 +321,7 @@ const ResponsiveGridLayout: React.FC = () => {
       });
       repositioningTimeoutsRef.current.clear();
     };
-  }, [tilesExceedingBoundary, repositionTile]);
+  }, [tilesExceedingBoundary, handleTileExceedingBoundary]);
 
   // Memoize children to prevent unnecessary re-renders
   const children = useMemo(() => {
@@ -451,6 +397,11 @@ const ResponsiveGridLayout: React.FC = () => {
         return;
       }
 
+      // Save current layout to history before applying changes (only if in edit mode)
+      if (state.editMode) {
+        saveLayoutHistory("User layout change");
+      }
+
       // Validate and correct layout
       const validatedLayout = validateLayout(currentLayout);
 
@@ -486,12 +437,15 @@ const ResponsiveGridLayout: React.FC = () => {
 
       updateLayouts(newLayouts);
     },
-    [updateLayouts, validateLayout, validateGridItemConstraints, isSmBreakpoint, state.editMode]
+    [updateLayouts, validateLayout, validateGridItemConstraints, isSmBreakpoint, state.editMode, saveLayoutHistory]
   );
 
   // Prevent tiles from being dragged beyond the boundary
   const onDrag = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
+      // Save history before first drag if not already saved (using a ref to track if we've saved for this drag session)
+      // This ensures we only save once per drag operation, not on every drag move
+      
       // Check if the new position would cause the tile to exceed the boundary
       const tileBottomRow = newItem.y + newItem.h;
       if (tileBottomRow > MAX_VISIBLE_ROWS) {
@@ -502,6 +456,16 @@ const ResponsiveGridLayout: React.FC = () => {
       }
     },
     []
+  );
+
+  // Save history before starting drag operations
+  const onDragStart = useCallback(
+    (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
+      if (state.editMode) {
+        saveLayoutHistory(`Before dragging tile: ${oldItem.i}`);
+      }
+    },
+    [state.editMode, saveLayoutHistory]
   );
 
   // Validate drag operations to ensure they don't exceed boundary
@@ -531,6 +495,16 @@ const ResponsiveGridLayout: React.FC = () => {
       }
     },
     []
+  );
+
+  // Save history before starting resize operations
+  const onResizeStart = useCallback(
+    (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
+      if (state.editMode) {
+        saveLayoutHistory(`Before resizing tile: ${oldItem.i}`);
+      }
+    },
+    [state.editMode, saveLayoutHistory]
   );
 
   // Validate resize operations to ensure they don't exceed boundary
@@ -586,8 +560,10 @@ const ResponsiveGridLayout: React.FC = () => {
         rowHeight={60}
         width={gridWidth}
         onLayoutChange={onLayoutChange}
+        onDragStart={onDragStart}
         onDrag={onDrag}
         onDragStop={onDragStop}
+        onResizeStart={onResizeStart}
         onResize={onResize}
         onResizeStop={onResizeStop}
         isDraggable={state.editMode}

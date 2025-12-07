@@ -78,6 +78,20 @@ export interface GridItem extends Layout {
   isBounded?: boolean; // if true, item can't be dragged outside the grid container
 }
 
+// Layout history entry
+export interface LayoutHistoryEntry {
+  id: string; // unique identifier for this history entry
+  timestamp: number; // when this state was saved
+  layouts: {
+    lg: GridItem[];
+    md: GridItem[];
+    sm: GridItem[];
+    xs: GridItem[];
+  };
+  action?: string; // optional description of what action caused this state
+  isValid: boolean; // whether this was a successful/valid layout state
+}
+
 export interface TileEditState {
   editMode: boolean;
   layouts: {
@@ -86,6 +100,8 @@ export interface TileEditState {
     sm: GridItem[];
     xs: GridItem[];
   };
+  layoutHistory: LayoutHistoryEntry[];
+  maxHistorySize: number; // maximum number of history entries to keep
 }
 
 interface TileEditContextValue {
@@ -94,6 +110,9 @@ interface TileEditContextValue {
   addTile: (tileId: string) => void;
   removeTile: (tileId: string) => void;
   updateLayouts: (layouts: { lg: GridItem[]; md: GridItem[]; sm: GridItem[]; xs: GridItem[] }) => void;
+  saveLayoutHistory: (action?: string) => void;
+  rollbackToLastValid: () => { success: boolean; layouts?: { lg: GridItem[]; md: GridItem[]; sm: GridItem[]; xs: GridItem[] } };
+  clearHistory: () => void;
 }
 
 const TileEditContext = createContext<TileEditContextValue | undefined>(undefined);
@@ -145,6 +164,8 @@ const getInitialState = (): TileEditState => {
               sm: applySizeConstraints(parsed.layouts.sm || []),
               xs: applySizeConstraints(parsed.layouts.xs || []),
             },
+            layoutHistory: [], // Reset history on load
+            maxHistorySize: 10, // Keep last 10 layout states
           };
         }
       } catch (e) {
@@ -162,6 +183,8 @@ const getInitialState = (): TileEditState => {
       sm: [],
       xs: [],
     },
+    layoutHistory: [],
+    maxHistorySize: 10,
   };
 };
 
@@ -170,6 +193,25 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
   const { state, actions } = useBaseReducer<TileEditState>({
     initialState,
   });
+
+  // Create initial history entry on first load
+  useEffect(() => {
+    if (state.layoutHistory.length === 0) {
+      const initialHistoryEntry: LayoutHistoryEntry = {
+        id: `history_initial_${Date.now()}`,
+        timestamp: Date.now(),
+        layouts: {
+          lg: [...state.layouts.lg],
+          md: [...state.layouts.md],
+          sm: [...state.layouts.sm],
+          xs: [...state.layouts.xs],
+        },
+        action: "Initial layout state",
+        isValid: true,
+      };
+      actions.setLayoutHistory([initialHistoryEntry]);
+    }
+  }, []); // Only run once on mount
 
   // Persist to localStorage whenever layouts change
   useEffect(() => {
@@ -181,11 +223,51 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
     }
   }, [state.layouts]);
 
+  // Save initial layout to history when component mounts
+  useEffect(() => {
+    // Only save initial history if we don't have any history yet and have some layout
+    if (state.layoutHistory.length === 0 && state.layouts.lg.length > 0) {
+      const initialHistoryEntry: LayoutHistoryEntry = {
+        id: `initial_${Date.now()}`,
+        timestamp: Date.now(),
+        layouts: {
+          lg: [...state.layouts.lg],
+          md: [...state.layouts.md],
+          sm: [...state.layouts.sm],
+          xs: [...state.layouts.xs],
+        },
+        action: "Initial layout loaded",
+        isValid: true,
+      };
+      actions.setLayoutHistory([initialHistoryEntry]);
+    }
+  }, [state.layouts.lg.length, state.layoutHistory.length, state.layouts, actions]);
+
   const toggleEditMode = () => {
     actions.setEditMode(!state.editMode);
   };
 
   const addTile = (tileId: string) => {
+    // Save current state to history before making changes
+    const historyEntry: LayoutHistoryEntry = {
+      id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      layouts: {
+        lg: [...state.layouts.lg],
+        md: [...state.layouts.md],
+        sm: [...state.layouts.sm],
+        xs: [...state.layouts.xs],
+      },
+      action: `Before adding tile: ${tileId}`,
+      isValid: true,
+    };
+
+    let newHistory = [...state.layoutHistory, historyEntry];
+    if (newHistory.length > state.maxHistorySize) {
+      newHistory = newHistory.slice(-state.maxHistorySize);
+    }
+    actions.setLayoutHistory(newHistory);
+
     const { getTileConfigById } = require("../../config/availableTiles");
     const config = getTileConfigById(tileId);
     if (!config) return;
@@ -229,6 +311,26 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
   };
 
   const removeTile = (tileId: string) => {
+    // Save current state to history before making changes
+    const historyEntry: LayoutHistoryEntry = {
+      id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      layouts: {
+        lg: [...state.layouts.lg],
+        md: [...state.layouts.md],
+        sm: [...state.layouts.sm],
+        xs: [...state.layouts.xs],
+      },
+      action: `Before removing tile: ${tileId}`,
+      isValid: true,
+    };
+
+    let newHistory = [...state.layoutHistory, historyEntry];
+    if (newHistory.length > state.maxHistorySize) {
+      newHistory = newHistory.slice(-state.maxHistorySize);
+    }
+    actions.setLayoutHistory(newHistory);
+
     const newLayouts = {
       lg: state.layouts.lg.filter(item => item.i !== tileId),
       md: state.layouts.md.filter(item => item.i !== tileId),
@@ -242,12 +344,68 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
     actions.setLayouts(layouts);
   };
 
+  const saveLayoutHistory = (action?: string) => {
+    const historyEntry: LayoutHistoryEntry = {
+      id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      layouts: {
+        lg: [...state.layouts.lg],
+        md: [...state.layouts.md],
+        sm: [...state.layouts.sm],
+        xs: [...state.layouts.xs],
+      },
+      action: action || "Layout change",
+      isValid: true, // Default to valid, can be marked invalid later
+    };
+
+    let newHistory = [...state.layoutHistory, historyEntry];
+    
+    // Keep only the last maxHistorySize entries
+    if (newHistory.length > state.maxHistorySize) {
+      newHistory = newHistory.slice(-state.maxHistorySize);
+    }
+
+    actions.setLayoutHistory(newHistory);
+  };
+
+  const rollbackToLastValid = (): { success: boolean; layouts?: { lg: GridItem[]; md: GridItem[]; sm: GridItem[]; xs: GridItem[] } } => {
+    // Find the last valid layout state in history
+    const validHistoryEntries = state.layoutHistory.filter(entry => entry.isValid);
+    
+    if (validHistoryEntries.length === 0) {
+      console.warn("No valid layout history available for rollback");
+      return { success: false };
+    }
+
+    const lastValidEntry = validHistoryEntries[validHistoryEntries.length - 1];
+    
+    // Restore the last valid layout
+    actions.setLayouts(lastValidEntry.layouts);
+    
+    // Remove any history entries after this valid one to prevent confusion
+    const rollbackIndex = state.layoutHistory.findIndex(entry => entry.id === lastValidEntry.id);
+    if (rollbackIndex !== -1) {
+      const cleanedHistory = state.layoutHistory.slice(0, rollbackIndex + 1);
+      actions.setLayoutHistory(cleanedHistory);
+    }
+
+    console.log(`Rolled back to layout state: ${lastValidEntry.action} (${new Date(lastValidEntry.timestamp).toLocaleTimeString()})`);
+    return { success: true, layouts: lastValidEntry.layouts };
+  };
+
+  const clearHistory = () => {
+    actions.setLayoutHistory([]);
+  };
+
   const value: TileEditContextValue = {
     state,
     toggleEditMode,
     addTile,
     removeTile,
     updateLayouts,
+    saveLayoutHistory,
+    rollbackToLastValid,
+    clearHistory,
   };
 
   return <TileEditContext.Provider value={value}>{children}</TileEditContext.Provider>;
