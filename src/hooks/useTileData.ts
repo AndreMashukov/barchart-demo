@@ -38,6 +38,34 @@ const mockDataGenerators: Record<TileDataSource, () => TileData> = {
       { date: "2024-07-01", value: 5680 },
     ],
   }),
+  serverLoad: () => ({ count: 72 }),
+  memoryUsage: () => ({ count: 84 }),
+  diskSpace: () => ({ count: 67 }),
+  networkLatency: () => ({ count: 24 }),
+  errorRate: () => ({ count: 0.3 }),
+  pageViews: () => ({ count: 15640 }),
+  bounceRate: () => ({ count: 32.5 }),
+  conversionRate: () => ({ count: 4.8 }),
+  customerSatisfaction: () => ({ count: 87 }),
+  salesGrowth: () => ({
+    count: 23,
+    sparklineData: [12, 15, 18, 16, 20, 22, 19, 24, 21, 25, 22, 23],
+  }),
+  marketShare: () => ({
+    count: 34,
+    sparklineData: [28, 30, 29, 32, 31, 33, 35, 34, 36, 35, 33, 34],
+  }),
+  productivity: () => ({
+    count: 89,
+    sparklineData: [75, 78, 82, 80, 85, 87, 84, 90, 88, 92, 89, 89],
+  }),
+  supportTickets: () => ({ count: 23 }),
+  apiCalls: () => ({
+    count: 12450,
+    sparklineData: [9800, 10200, 9950, 10800, 11200, 11600, 12000, 11800, 12200, 12350, 12400, 12450],
+  }),
+  downloads: () => ({ count: 8750 }),
+  subscriptions: () => ({ count: 2340 }),
 };
 
 // Simulate API delay
