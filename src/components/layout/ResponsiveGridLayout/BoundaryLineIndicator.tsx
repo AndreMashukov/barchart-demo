@@ -45,7 +45,7 @@ const BoundaryLineIndicator: React.FC<BoundaryLineIndicatorProps> = ({
           color: "#ff4444",
           fontSize: "0.75rem",
           fontWeight: "bold",
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          // backgroundColor: "rgba(255, 255, 255, 0.9)",
           padding: "2px 6px",
           borderRadius: "4px",
           whiteSpace: "nowrap",

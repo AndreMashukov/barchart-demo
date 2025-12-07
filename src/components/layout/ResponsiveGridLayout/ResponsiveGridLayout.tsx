@@ -14,10 +14,11 @@ import { useTileData } from "../../../hooks/useTileData";
 import BoundaryLineIndicator from "./BoundaryLineIndicator";
 
 // Boundary configuration
-const MAX_VISIBLE_ROWS = 10;
+const MAX_VISIBLE_ROWS = 14;
 const ROW_HEIGHT = 60;
 const ROW_MARGIN = 8;
-const boundaryPixels = MAX_VISIBLE_ROWS * ROW_HEIGHT + (MAX_VISIBLE_ROWS - 1) * ROW_MARGIN;
+const BOUNDARY_LINE_POSITION = MAX_VISIBLE_ROWS; // Controls which row the boundary line appears at
+const boundaryPixels = BOUNDARY_LINE_POSITION * ROW_HEIGHT + (BOUNDARY_LINE_POSITION - 1) * ROW_MARGIN;
 const REPOSITIONING_DELAY_MS = 1000; // 1 second delay before repositioning
 const FADE_DURATION_MS = 500; // Animation duration for repositioning
 
