@@ -18,8 +18,8 @@ const MAX_VISIBLE_ROWS = 10;
 const ROW_HEIGHT = 60;
 const ROW_MARGIN = 8;
 const boundaryPixels = MAX_VISIBLE_ROWS * ROW_HEIGHT + (MAX_VISIBLE_ROWS - 1) * ROW_MARGIN;
-const REMOVAL_DELAY_MS = 1000; // 1 second delay before removal
-const FADE_OUT_DURATION_MS = 500; // Animation duration
+const REPOSITIONING_DELAY_MS = 1000; // 1 second delay before repositioning
+const FADE_DURATION_MS = 500; // Animation duration for repositioning
 
 interface TileRendererProps {
   tileId: string;
@@ -113,21 +113,135 @@ const ResponsiveGridLayout: React.FC = () => {
   // State variable to track tiles that cross or exceed the boundary
   const [tilesExceedingBoundary, setTilesExceedingBoundary] = useState<Set<string>>(new Set());
   
-  // State variable to track tiles that are being removed (fading out)
-  const [tilesRemoving, setTilesRemoving] = useState<Set<string>>(new Set());
+  // State variable to track tiles that are being repositioned (fading out)
+  const [tilesRepositioning, setTilesRepositioning] = useState<Set<string>>(new Set());
   
-  // Ref to store timeout IDs for cleanup (stores both delay and removal timeouts)
+  // Ref to store timeout IDs for cleanup (stores both delay and repositioning timeouts)
   interface TimeoutRef {
     delayTimeout: NodeJS.Timeout;
-    removalTimeout?: NodeJS.Timeout;
+    repositioningTimeout?: NodeJS.Timeout;
   }
-  const removalTimeoutsRef = useRef<Map<string, TimeoutRef>>(new Map());
+  const repositioningTimeoutsRef = useRef<Map<string, TimeoutRef>>(new Map());
 
   // Helper function to check if a tile exceeds the boundary
   const tileExceedsBoundary = useCallback((tile: Layout | GridItem): boolean => {
     const tileBottomRow = tile.y + tile.h;
     return tileBottomRow > MAX_VISIBLE_ROWS;
   }, []);
+
+  // Helper function to find available space for a tile
+  const findAvailableSpace = useCallback((tileToPlace: Layout | GridItem, currentLayout: Layout[]): { x: number; y: number; w: number; h: number } | null => {
+    const minTileWidth = Math.max(tileToPlace.minW || 2, 2); // Minimum width of 2
+    const minTileHeight = Math.max(tileToPlace.minH || 1, 1); // Minimum height of 1
+    
+    // Create a grid to track occupied spaces
+    const grid: boolean[][] = Array(MAX_VISIBLE_ROWS).fill(null).map(() => Array(12).fill(false));
+    
+    // Mark occupied spaces
+    currentLayout.forEach(item => {
+      if (item.i !== tileToPlace.i) { // Don't consider the tile we're trying to place
+        for (let row = item.y; row < item.y + item.h && row < MAX_VISIBLE_ROWS; row++) {
+          for (let col = item.x; col < item.x + item.w && col < 12; col++) {
+            grid[row][col] = true;
+          }
+        }
+      }
+    });
+    
+    // Try to find space starting from top-left, prioritizing minimal size
+    for (let y = 0; y <= MAX_VISIBLE_ROWS - minTileHeight; y++) {
+      for (let x = 0; x <= 12 - minTileWidth; x++) {
+        // Check if we can fit the minimal size here
+        let canFit = true;
+        for (let row = y; row < y + minTileHeight && canFit; row++) {
+          for (let col = x; col < x + minTileWidth && canFit; col++) {
+            if (grid[row][col]) {
+              canFit = false;
+            }
+          }
+        }
+        
+        if (canFit) {
+          // Try to find the maximum size we can fit at this position
+          let maxWidth = minTileWidth;
+          let maxHeight = minTileHeight;
+          
+          // Expand width
+          for (let w = minTileWidth + 1; w <= 12 - x; w++) {
+            let canExpandWidth = true;
+            for (let row = y; row < y + minTileHeight && canExpandWidth; row++) {
+              if (grid[row][x + w - 1]) {
+                canExpandWidth = false;
+              }
+            }
+            if (canExpandWidth) {
+              maxWidth = w;
+            } else {
+              break;
+            }
+          }
+          
+          // Expand height
+          for (let h = minTileHeight + 1; h <= MAX_VISIBLE_ROWS - y; h++) {
+            let canExpandHeight = true;
+            for (let col = x; col < x + maxWidth && canExpandHeight; col++) {
+              if (grid[y + h - 1][col]) {
+                canExpandHeight = false;
+              }
+            }
+            if (canExpandHeight) {
+              maxHeight = h;
+            } else {
+              break;
+            }
+          }
+          
+          return {
+            x,
+            y,
+            w: Math.min(maxWidth, tileToPlace.maxW || 12),
+            h: Math.min(maxHeight, tileToPlace.maxH || MAX_VISIBLE_ROWS)
+          };
+        }
+      }
+    }
+    
+    return null; // No available space found
+  }, []);
+
+  // Helper function to reposition a tile to available space
+  const repositionTile = useCallback((tileId: string) => {
+    const currentLayout = [...state.layouts.lg];
+    const tileIndex = currentLayout.findIndex(item => item.i === tileId);
+    
+    if (tileIndex === -1) return;
+    
+    const tileToReposition = currentLayout[tileIndex];
+    const availableSpace = findAvailableSpace(tileToReposition, currentLayout);
+    
+    if (availableSpace) {
+      // Update the tile with new position and minimal size
+      const updatedTile = {
+        ...tileToReposition,
+        x: availableSpace.x,
+        y: availableSpace.y,
+        w: availableSpace.w,
+        h: availableSpace.h
+      };
+      
+      currentLayout[tileIndex] = updatedTile;
+      
+      // Update layouts
+      const newLayouts = {
+        lg: currentLayout,
+        md: currentLayout,
+        sm: currentLayout,
+        xs: currentLayout,
+      };
+      
+      updateLayouts(newLayouts);
+    }
+  }, [state.layouts.lg, updateLayouts, findAvailableSpace]);
 
   // Update state when layout changes to track tiles exceeding boundary
   useEffect(() => {
@@ -142,55 +256,55 @@ const ResponsiveGridLayout: React.FC = () => {
     setTilesExceedingBoundary(exceedingTiles);
   }, [state.layouts.lg, tileExceedsBoundary]);
 
-  // Handle automatic removal of tiles exceeding boundary after delay
+  // Handle automatic repositioning of tiles exceeding boundary after delay
   useEffect(() => {
-    // Clean up any existing timeouts for tiles that no longer exceed boundary
+    // Set up repositioning timeouts for tiles that exceed boundary
     tilesExceedingBoundary.forEach((tileId) => {
-      if (!removalTimeoutsRef.current.has(tileId)) {
+      if (!repositioningTimeoutsRef.current.has(tileId)) {
         // New tile exceeding boundary - wait 1 second, then start fade animation
         const delayTimeout = setTimeout(() => {
           // Start fade-out animation
-          setTilesRemoving((prev) => {
+          setTilesRepositioning((prev) => {
             const newSet = new Set(prev);
             newSet.add(tileId);
             return newSet;
           });
 
-          // Remove tile after fade animation completes
-          const removalTimeout = setTimeout(() => {
-            removeTile(tileId);
-            const timeoutRef = removalTimeoutsRef.current.get(tileId);
+          // Reposition tile after fade animation completes
+          const repositioningTimeout = setTimeout(() => {
+            repositionTile(tileId);
+            const timeoutRef = repositioningTimeoutsRef.current.get(tileId);
             if (timeoutRef) {
-              removalTimeoutsRef.current.delete(tileId);
+              repositioningTimeoutsRef.current.delete(tileId);
             }
-            setTilesRemoving((prev) => {
+            setTilesRepositioning((prev) => {
               const newSet = new Set(prev);
               newSet.delete(tileId);
               return newSet;
             });
-          }, FADE_OUT_DURATION_MS);
+          }, FADE_DURATION_MS);
 
-          // Update the ref to include the removal timeout
-          const timeoutRef = removalTimeoutsRef.current.get(tileId);
+          // Update the ref to include the repositioning timeout
+          const timeoutRef = repositioningTimeoutsRef.current.get(tileId);
           if (timeoutRef) {
-            timeoutRef.removalTimeout = removalTimeout;
+            timeoutRef.repositioningTimeout = repositioningTimeout;
           }
-        }, REMOVAL_DELAY_MS);
+        }, REPOSITIONING_DELAY_MS);
 
         // Store the initial delay timeout
-        removalTimeoutsRef.current.set(tileId, { delayTimeout });
+        repositioningTimeoutsRef.current.set(tileId, { delayTimeout });
       }
     });
 
     // Clean up timeouts for tiles that no longer exceed boundary
-    removalTimeoutsRef.current.forEach((timeoutRef, tileId) => {
+    repositioningTimeoutsRef.current.forEach((timeoutRef, tileId) => {
       if (!tilesExceedingBoundary.has(tileId)) {
         clearTimeout(timeoutRef.delayTimeout);
-        if (timeoutRef.removalTimeout) {
-          clearTimeout(timeoutRef.removalTimeout);
+        if (timeoutRef.repositioningTimeout) {
+          clearTimeout(timeoutRef.repositioningTimeout);
         }
-        removalTimeoutsRef.current.delete(tileId);
-        setTilesRemoving((prev) => {
+        repositioningTimeoutsRef.current.delete(tileId);
+        setTilesRepositioning((prev) => {
           const newSet = new Set(prev);
           newSet.delete(tileId);
           return newSet;
@@ -200,33 +314,33 @@ const ResponsiveGridLayout: React.FC = () => {
 
     // Cleanup function
     return () => {
-      removalTimeoutsRef.current.forEach((timeoutRef) => {
+      repositioningTimeoutsRef.current.forEach((timeoutRef) => {
         clearTimeout(timeoutRef.delayTimeout);
-        if (timeoutRef.removalTimeout) {
-          clearTimeout(timeoutRef.removalTimeout);
+        if (timeoutRef.repositioningTimeout) {
+          clearTimeout(timeoutRef.repositioningTimeout);
         }
       });
-      removalTimeoutsRef.current.clear();
+      repositioningTimeoutsRef.current.clear();
     };
-  }, [tilesExceedingBoundary, removeTile]);
+  }, [tilesExceedingBoundary, repositionTile]);
 
   // Memoize children to prevent unnecessary re-renders
   const children = useMemo(() => {
     return state.layouts.lg.map((item) => {
       // Use state variable to check if tile exceeds boundary
       const exceedsBoundary = tilesExceedingBoundary.has(item.i);
-      const isRemoving = tilesRemoving.has(item.i);
+      const isRepositioning = tilesRepositioning.has(item.i);
       
       return (
         <div
           key={item.i}
           style={{
             height: "100%",
-            opacity: isRemoving ? 0 : 1,
-            transform: isRemoving ? "scale(0.95)" : "none",
-            // Only apply transition when removing, not during drag operations
-            transition: isRemoving 
-              ? `opacity ${FADE_OUT_DURATION_MS}ms ease-out, transform ${FADE_OUT_DURATION_MS}ms ease-out`
+            opacity: isRepositioning ? 0.5 : 1,
+            transform: isRepositioning ? "scale(0.98)" : "none",
+            // Only apply transition when repositioning, not during drag operations
+            transition: isRepositioning 
+              ? `opacity ${FADE_DURATION_MS}ms ease-out, transform ${FADE_DURATION_MS}ms ease-out`
               : "none",
           }}
         >
@@ -243,7 +357,7 @@ const ResponsiveGridLayout: React.FC = () => {
         </div>
       );
     });
-  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary, tilesRemoving]);
+  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary, tilesRepositioning]);
 
   // No validation - return layout as-is
   const validateLayout = useCallback((layout: Layout[]): Layout[] => {
@@ -322,26 +436,60 @@ const ResponsiveGridLayout: React.FC = () => {
     [updateLayouts, validateLayout, validateGridItemConstraints, isSmBreakpoint, state.editMode]
   );
 
-  // No constraints during drag
+  // Prevent tiles from being dragged beyond the boundary
   const onDrag = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
-      // No restrictions applied
+      // Check if the new position would cause the tile to exceed the boundary
+      const tileBottomRow = newItem.y + newItem.h;
+      if (tileBottomRow > MAX_VISIBLE_ROWS) {
+        // Constrain the y position to keep the tile within boundary
+        const maxAllowedY = MAX_VISIBLE_ROWS - newItem.h;
+        newItem.y = Math.max(0, maxAllowedY); // Ensure y is not negative
+        placeholder.y = newItem.y; // Update placeholder to match
+      }
     },
     []
   );
 
-  // No constraints when drag stops
+  // Validate drag operations to ensure they don't exceed boundary
   const onDragStop = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
-      // No restrictions applied
+      // Double-check that the final item doesn't exceed boundary
+      const tileBottomRow = newItem.y + newItem.h;
+      if (tileBottomRow > MAX_VISIBLE_ROWS) {
+        // Revert to maximum allowed position
+        const maxAllowedY = MAX_VISIBLE_ROWS - newItem.h;
+        newItem.y = Math.max(0, maxAllowedY);
+      }
     },
     []
   );
 
-  // No constraints on resize operations
+  // Prevent tiles from being resized beyond the boundary
+  const onResize = useCallback(
+    (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
+      // Check if the new item would exceed the boundary
+      const tileBottomRow = newItem.y + newItem.h;
+      if (tileBottomRow > MAX_VISIBLE_ROWS) {
+        // Constrain the height to stay within boundary
+        const maxAllowedHeight = MAX_VISIBLE_ROWS - newItem.y;
+        newItem.h = Math.max(1, maxAllowedHeight); // Ensure minimum height of 1
+        placeholder.h = newItem.h; // Update placeholder to match
+      }
+    },
+    []
+  );
+
+  // Validate resize operations to ensure they don't exceed boundary
   const onResizeStop = useCallback(
     (layout: Layout[], oldItem: Layout, newItem: Layout, placeholder: Layout, e: MouseEvent, element: HTMLElement) => {
-      // No restrictions applied
+      // Double-check that the final item doesn't exceed boundary
+      const tileBottomRow = newItem.y + newItem.h;
+      if (tileBottomRow > MAX_VISIBLE_ROWS) {
+        // Revert to maximum allowed height
+        const maxAllowedHeight = MAX_VISIBLE_ROWS - newItem.y;
+        newItem.h = Math.max(1, maxAllowedHeight);
+      }
     },
     []
   );
@@ -387,6 +535,7 @@ const ResponsiveGridLayout: React.FC = () => {
         onLayoutChange={onLayoutChange}
         onDrag={onDrag}
         onDragStop={onDragStop}
+        onResize={onResize}
         onResizeStop={onResizeStop}
         isDraggable={state.editMode}
         isResizable={state.editMode}
