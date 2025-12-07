@@ -209,7 +209,7 @@ const ResponsiveGridLayout: React.FC = () => {
     return null; // No available space found
   }, []);
 
-  // Helper function to reposition a tile to available space
+  // Helper function to reposition a tile to available space using minimal size
   const repositionTile = useCallback((tileId: string) => {
     const currentLayout = [...state.layouts.lg];
     const tileIndex = currentLayout.findIndex(item => item.i === tileId);
@@ -217,7 +217,55 @@ const ResponsiveGridLayout: React.FC = () => {
     if (tileIndex === -1) return;
     
     const tileToReposition = currentLayout[tileIndex];
-    const availableSpace = findAvailableSpace(tileToReposition, currentLayout);
+    
+    // Get minimal size for this tile from its constraints, fallback to reasonable defaults
+    const minTileWidth = Math.max(tileToReposition.minW || 2, 1);
+    const minTileHeight = Math.max(tileToReposition.minH || 2, 1);
+    
+    // Create a simplified version of findAvailableSpace that only looks for minimal size
+    const findMinimalSpace = (tileToPlace: Layout, currentLayout: Layout[]) => {
+      // Create a grid to track occupied spaces
+      const grid: boolean[][] = Array(MAX_VISIBLE_ROWS).fill(null).map(() => Array(12).fill(false));
+      
+      // Mark occupied spaces
+      currentLayout.forEach(item => {
+        if (item.i !== tileToPlace.i) {
+          for (let row = item.y; row < item.y + item.h && row < MAX_VISIBLE_ROWS; row++) {
+            for (let col = item.x; col < item.x + item.w && col < 12; col++) {
+              grid[row][col] = true;
+            }
+          }
+        }
+      });
+      
+      // Find first available space for minimal size
+      for (let y = 0; y <= MAX_VISIBLE_ROWS - minTileHeight; y++) {
+        for (let x = 0; x <= 12 - minTileWidth; x++) {
+          // Check if we can fit the minimal size here
+          let canFit = true;
+          for (let row = y; row < y + minTileHeight && canFit; row++) {
+            for (let col = x; col < x + minTileWidth && canFit; col++) {
+              if (grid[row][col]) {
+                canFit = false;
+              }
+            }
+          }
+          
+          if (canFit) {
+            return {
+              x,
+              y,
+              w: minTileWidth,
+              h: minTileHeight
+            };
+          }
+        }
+      }
+      
+      return null;
+    };
+    
+    const availableSpace = findMinimalSpace(tileToReposition, currentLayout);
     
     if (availableSpace) {
       // Update the tile with new position and minimal size
@@ -240,8 +288,12 @@ const ResponsiveGridLayout: React.FC = () => {
       };
       
       updateLayouts(newLayouts);
+      
+      console.log(`Repositioned tile ${tileId} to minimal size (${minTileWidth}x${minTileHeight}) at position (${availableSpace.x}, ${availableSpace.y})`);
+    } else {
+      console.warn(`Could not find space to reposition tile ${tileId} with minimal size (${minTileWidth}x${minTileHeight})`);
     }
-  }, [state.layouts.lg, updateLayouts, findAvailableSpace]);
+  }, [state.layouts.lg, updateLayouts]);
 
   // Update state when layout changes to track tiles exceeding boundary
   useEffect(() => {
