@@ -5,6 +5,9 @@ import { Layout } from "react-grid-layout";
 const STORAGE_KEY = "dashboard-tile-configuration";
 
 // Size constraints helper function
+const MAX_VISIBLE_ROWS = 12;
+const GRID_COLUMNS = 12;
+
 export const getSizeConstraints = (isType2: boolean) => {
   // Size restrictions: Type1 = 300px, Type2 = 500px
   // Row height = 60px, so max height = 300px / 60px = 5 rows (Type1), 500px / 60px ≈ 8 rows (Type2)
@@ -248,6 +251,69 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
   };
 
   const addTile = (tileId: string) => {
+    const { getTileConfigById } = require("../../config/availableTiles");
+    const config = getTileConfigById(tileId);
+    if (!config) return;
+
+    // Determine tile dimensions based on type - use minimal size
+    const isType2 = config.type === "Type2";
+    const constraints = getSizeConstraints(isType2);
+    const w = constraints.minW; // Use minimal width
+    const h = constraints.minH; // Use minimal height
+
+    // Find next available position
+    const lgLayout = [...state.layouts.lg];
+    let x = 0;
+    let y = 0;
+    let foundPosition = false;
+
+    // Create occupancy grid
+    const occupied = Array(MAX_VISIBLE_ROWS).fill(null).map(() => Array(GRID_COLUMNS).fill(false));
+
+    // Mark occupied cells
+    lgLayout.forEach(item => {
+      // Check if item is within the visible grid area we care about
+      for (let dy = 0; dy < item.h; dy++) {
+        for (let dx = 0; dx < item.w; dx++) {
+          const row = item.y + dy;
+          const col = item.x + dx;
+          if (row >= 0 && row < MAX_VISIBLE_ROWS && col >= 0 && col < GRID_COLUMNS) {
+            occupied[row][col] = true;
+          }
+        }
+      }
+    });
+
+    // Scan for available space (top-to-bottom, left-to-right)
+    for (let r = 0; r <= MAX_VISIBLE_ROWS - h; r++) {
+      for (let c = 0; c <= GRID_COLUMNS - w; c++) {
+        let fits = true;
+        // Check if the proposed area is free
+        for (let dy = 0; dy < h; dy++) {
+          for (let dx = 0; dx < w; dx++) {
+            if (occupied[r + dy][c + dx]) {
+              fits = false;
+              break;
+            }
+          }
+          if (!fits) break;
+        }
+
+        if (fits) {
+          x = c;
+          y = r;
+          foundPosition = true;
+          break;
+        }
+      }
+      if (foundPosition) break;
+    }
+
+    if (!foundPosition) {
+      window.alert(`No available space to add this tile within the ${MAX_VISIBLE_ROWS}-row visible area.`);
+      return;
+    }
+
     // Save current state to history before making changes
     const historyEntry: LayoutHistoryEntry = {
       id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -267,27 +333,6 @@ export const TileEditProvider: React.FC<TileEditProviderProps> = ({ children }) 
       newHistory = newHistory.slice(-state.maxHistorySize);
     }
     actions.setLayoutHistory(newHistory);
-
-    const { getTileConfigById } = require("../../config/availableTiles");
-    const config = getTileConfigById(tileId);
-    if (!config) return;
-
-    // Determine tile dimensions based on type - use minimal size
-    const isType2 = config.type === "Type2";
-    const constraints = getSizeConstraints(isType2);
-    const w = constraints.minW; // Use minimal width
-    const h = constraints.minH; // Use minimal height
-
-    // Find next available position
-    const lgLayout = [...state.layouts.lg];
-    let x = 0;
-    let y = 0;
-
-    // Simple algorithm: find first available spot
-    if (lgLayout.length > 0) {
-      const maxY = Math.max(...lgLayout.map(item => item.y + item.h));
-      y = maxY;
-    }
 
     const newItem: GridItem = {
       i: tileId,
