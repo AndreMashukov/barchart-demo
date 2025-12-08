@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import Box from "@mui/material/Box";
-import { useTheme, useMediaQuery } from "@mui/material";
+import { useTheme, useMediaQuery, styled } from "@mui/material";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useTileEdit, GridItem } from "../../../context/TileEditContext";
@@ -12,6 +12,54 @@ import SparklineTileLineCol from "../../Tiles/SparklineTileLineCol/SparklineTile
 import EditableTileWrapper from "../../Tiles/EditableTileWrapper";
 import { useTileData } from "../../../hooks/useTileData";
 import BoundaryLineIndicator from "./BoundaryLineIndicator";
+
+// Styled container with custom resize handle styling for edit mode
+const StyledGridContainer = styled(Box)(({ theme }) => ({
+  // Style the default react-resizable handles when in edit mode
+  "& .react-resizable-handle": {
+    "&::after": {
+      content: "\"\"",
+      position: "absolute",
+      width: "0",
+      height: "0",
+      zIndex: 100,
+      animation: "resizeHandleBlink 2s infinite",
+      // SE corner triangle (most common)
+      right: "-8px",
+      bottom: "-8px",
+      borderLeft: "16px solid transparent",
+      borderTop: "16px solid transparent", 
+      borderRight: "16px solid white",
+      borderBottom: "16px solid white",
+      filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))",
+    }
+  },
+  
+  // Hide the default small handle and show our custom triangle
+  "& .react-resizable-handle-se": {
+    width: "32px !important",
+    height: "32px !important",
+    backgroundColor: "transparent !important",
+    border: "none !important",
+    right: "-16px",
+    bottom: "-16px",
+  },
+  
+  "@keyframes resizeHandleBlink": {
+    "0%": {
+      opacity: 1,
+      filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))",
+    },
+    "50%": {
+      opacity: 0.4,
+      filter: "drop-shadow(0 2px 6px rgba(252, 123, 0, 0.6))",
+    },
+    "100%": {
+      opacity: 1,
+      filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))",
+    }
+  }
+}));
 
 // Boundary configuration
 const MAX_VISIBLE_ROWS = 12;
@@ -489,7 +537,7 @@ const ResponsiveGridLayout: React.FC = () => {
   }, [isSmBreakpoint, state.editMode, windowWidth]);
 
   return (
-    <Box 
+    <StyledGridContainer 
       sx={{ 
         maxHeight: "80vh", 
         minHeight: state.editMode ? `${boundaryPixels + 50}px` : "200px", // Ensure container is tall enough to show boundary line
@@ -529,7 +577,7 @@ const ResponsiveGridLayout: React.FC = () => {
       >
         {children}
       </GridLayout>
-    </Box>
+    </StyledGridContainer>
   );
 };
 
