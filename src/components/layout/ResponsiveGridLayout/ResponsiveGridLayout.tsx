@@ -20,7 +20,6 @@ const ROW_MARGIN = 8;
 const BOUNDARY_LINE_POSITION = MAX_VISIBLE_ROWS; // Controls which row the boundary line appears at
 const boundaryPixels = BOUNDARY_LINE_POSITION * ROW_HEIGHT + (BOUNDARY_LINE_POSITION - 1) * ROW_MARGIN;
 const REPOSITIONING_DELAY_MS = 1000; // 1 second delay before repositioning
-const FADE_DURATION_MS = 500; // Animation duration for repositioning
 
 interface TileRendererProps {
   tileId: string;
@@ -114,15 +113,8 @@ const ResponsiveGridLayout: React.FC = () => {
   // State variable to track tiles that cross or exceed the boundary
   const [tilesExceedingBoundary, setTilesExceedingBoundary] = useState<Set<string>>(new Set());
   
-  // State variable to track tiles that are being repositioned (fading out)
-  const [tilesRepositioning, setTilesRepositioning] = useState<Set<string>>(new Set());
-  
-  // Ref to store timeout IDs for cleanup (stores both delay and repositioning timeouts)
-  interface TimeoutRef {
-    delayTimeout: NodeJS.Timeout;
-    repositioningTimeout?: NodeJS.Timeout;
-  }
-  const repositioningTimeoutsRef = useRef<Map<string, TimeoutRef>>(new Map());
+  // Ref to store timeout IDs for cleanup
+  const repositioningTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Helper function to check if a tile exceeds the boundary
   const tileExceedsBoundary = useCallback((tile: Layout | GridItem): boolean => {
@@ -260,64 +252,29 @@ const ResponsiveGridLayout: React.FC = () => {
     // Set up repositioning timeouts for tiles that exceed boundary
     tilesExceedingBoundary.forEach((tileId) => {
       if (!repositioningTimeoutsRef.current.has(tileId)) {
-        // New tile exceeding boundary - wait 1 second, then start fade animation
+        // New tile exceeding boundary - wait 1 second, then handle
         const delayTimeout = setTimeout(() => {
-          // Start fade-out animation
-          setTilesRepositioning((prev) => {
-            const newSet = new Set(prev);
-            newSet.add(tileId);
-            return newSet;
-          });
-
-          // Handle tile after fade animation completes
-          const repositioningTimeout = setTimeout(() => {
-            handleTileExceedingBoundary(tileId);
-            const timeoutRef = repositioningTimeoutsRef.current.get(tileId);
-            if (timeoutRef) {
-              repositioningTimeoutsRef.current.delete(tileId);
-            }
-            setTilesRepositioning((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(tileId);
-              return newSet;
-            });
-          }, FADE_DURATION_MS);
-
-          // Update the ref to include the repositioning timeout
-          const timeoutRef = repositioningTimeoutsRef.current.get(tileId);
-          if (timeoutRef) {
-            timeoutRef.repositioningTimeout = repositioningTimeout;
-          }
+          handleTileExceedingBoundary(tileId);
+          repositioningTimeoutsRef.current.delete(tileId);
         }, REPOSITIONING_DELAY_MS);
 
-        // Store the initial delay timeout
-        repositioningTimeoutsRef.current.set(tileId, { delayTimeout });
+        // Store the timeout
+        repositioningTimeoutsRef.current.set(tileId, delayTimeout);
       }
     });
 
     // Clean up timeouts for tiles that no longer exceed boundary
-    repositioningTimeoutsRef.current.forEach((timeoutRef, tileId) => {
+    repositioningTimeoutsRef.current.forEach((timeout, tileId) => {
       if (!tilesExceedingBoundary.has(tileId)) {
-        clearTimeout(timeoutRef.delayTimeout);
-        if (timeoutRef.repositioningTimeout) {
-          clearTimeout(timeoutRef.repositioningTimeout);
-        }
+        clearTimeout(timeout);
         repositioningTimeoutsRef.current.delete(tileId);
-        setTilesRepositioning((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(tileId);
-          return newSet;
-        });
       }
     });
 
     // Cleanup function
     return () => {
-      repositioningTimeoutsRef.current.forEach((timeoutRef) => {
-        clearTimeout(timeoutRef.delayTimeout);
-        if (timeoutRef.repositioningTimeout) {
-          clearTimeout(timeoutRef.repositioningTimeout);
-        }
+      repositioningTimeoutsRef.current.forEach((timeout) => {
+        clearTimeout(timeout);
       });
       repositioningTimeoutsRef.current.clear();
     };
@@ -328,19 +285,12 @@ const ResponsiveGridLayout: React.FC = () => {
     return state.layouts.lg.map((item) => {
       // Use state variable to check if tile exceeds boundary
       const exceedsBoundary = tilesExceedingBoundary.has(item.i);
-      const isRepositioning = tilesRepositioning.has(item.i);
       
       return (
         <div
           key={item.i}
           style={{
             height: "100%",
-            opacity: isRepositioning ? 0.5 : 1,
-            transform: isRepositioning ? "scale(0.98)" : "none",
-            // Only apply transition when repositioning, not during drag operations
-            transition: isRepositioning 
-              ? `opacity ${FADE_DURATION_MS}ms ease-out, transform ${FADE_DURATION_MS}ms ease-out`
-              : "none",
           }}
         >
           <TileRenderer
@@ -356,7 +306,7 @@ const ResponsiveGridLayout: React.FC = () => {
         </div>
       );
     });
-  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary, tilesRepositioning]);
+  }, [state.layouts.lg, state.editMode, removeTile, tilesExceedingBoundary]);
 
   // No validation - return layout as-is
   const validateLayout = useCallback((layout: Layout[]): Layout[] => {
