@@ -29,8 +29,8 @@ const StyledGridContainer = styled(Box)(({ theme }) => ({
       bottom: "-8px",
       borderLeft: "16px solid transparent",
       borderTop: "16px solid transparent", 
-      borderRight: "16px solid white",
-      borderBottom: "16px solid white",
+      borderRight: "16px solid #9ca3af",
+      borderBottom: "16px solid #9ca3af",
       filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))",
     }
   },
